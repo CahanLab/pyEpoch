@@ -10,7 +10,7 @@ Epoch leverages single-cell transcriptomic data, single-cell analysis methods, a
 
 ### Set up
 
-```R
+```Python
 list12<-loadDataFromLoom("data/adMuscle_E12_DPT_071919.loom")
 expDat<-list12[['expDat']]
 sampTab<-list12[['sampTab']] 
