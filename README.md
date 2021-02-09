@@ -10,6 +10,7 @@ Epoch leverages single-cell transcriptomic data, single-cell analysis methods, a
 
 ### Set up
 
-.. code:: python
+'''python
 
    print("A literal block directive explicitly marked as python code")
+'''
