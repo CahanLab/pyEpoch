@@ -85,4 +85,44 @@ Defining epochs can be done in a number of ways. Here we show an example with me
 
 For a simpler approach, assign_epoch_simple() will define and assign epochs based on maximum mean expression of a gene. This approach assumes genes cannot belong to more than one epoch.
 
+```Python
+xdyn=define_epochs(xdyn,expDat.loc[dgenes,:],method="pseudotime",num_epochs=2)
+epoch_assignments=assign_epochs(expSmoothed=expDat.loc[dgenes,], xdyn=xdyn, method="active_expression")
 
+dynamic_grn=epochGRN(grnDF, epoch_assignments)
+
+#     from      to            name
+#0  epoch1  epoch2  epoch1..epoch2
+#1  epoch1  epoch1  epoch1..epoch1
+#2  epoch2  epoch2  epoch2..epoch2
+
+
+# Example alternative:
+# epoch_assignments1=assign_epochs_simple(expSmoothed=expDat.loc[dgenes,],xdyn=xdyn,num_epochs=2)
+```
+  The object dynamic_grn stores the dynamic network across epochs. The list includes active subnetworks at each epoch (in this example, "epoch1..epoch1" and "epoch2..epoch2") as well as potential transition networks (in this example, "epoch1..epoch2") describing how network topology transitions from one epoch to another.
+
+
+### Influential TFs
+We can use Epoch to identify the most influential regulators in the reconstructed dynamic (or static) network. Here's an example of accomplishing this via a PageRank approach on the dynamic network. 
+
+```Python
+gene_rank=compute_pagerank(dynnet=dynamic_grn)
+```
+The object gene_rank now contains a list of rankings for each epoch and transition network:
+
+```Python
+print(gene_rank["epoch1..epoch2"].iloc[0:5,:])
+#        gene  page_rank  is_regulator
+#Npm1    Npm1   0.062243          True
+#Pcna    Pcna   0.061330          True
+#Myod1  Myod1   0.049656          True
+#Ncl      Ncl   0.045162          True
+#Hes6    Hes6   0.030157          True
+```
+### Plotting
+Epoch contains various plotting tools to visualize dynamic activity of genes and networks.
+
+
+#### We can visualize dynamically expressed genes across time
+This is particularly useful for verifying epoch assignments, and gauging how many epochs should occur in a trajectory
