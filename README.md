@@ -126,3 +126,14 @@ Epoch contains various plotting tools to visualize dynamic activity of genes and
 
 #### We can visualize dynamically expressed genes across time
 This is particularly useful for verifying epoch assignments, and gauging how many epochs should occur in a trajectory
+```Python
+# First, smooth expression for a cleaner plot
+ccells=xdyn[0]
+expSmoothed=grnKsmooth(expDat,ccells,BW=.1)
+
+# Plot a heatmap of the dynamic TFs
+tfstoplot=list(set(list(mmTFs["mmTFs"].values))& set(dgenes))
+dynTFs=xdyn
+dynTFs[1]=dynTFs[1][list(dynTFs[1].index.isin(tfstoplot))]
+hm_dyn(expSmoothed,dynTFs,topX=100)
+```
