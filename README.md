@@ -137,3 +137,4 @@ dynTFs=xdyn
 dynTFs[1]=dynTFs[1][list(dynTFs[1].index.isin(tfstoplot))]
 hm_dyn(expSmoothed,dynTFs,topX=100)
 ```
+<img src="img/heatmap.png">
