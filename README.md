@@ -34,19 +34,38 @@ from skfda import FDataGrid
 from skfda.misc import kernels
 import skfda.preprocessing.smoothing.kernel_smoothers as ks
 import seaborn as sns
+
+from sklearn.preprocessing import KBinsDiscretizer
+from pyitlib import discrete_random_variable as drv
+from scipy import stats
 ```
 ### Load Data
 
 ```Python
+sc.settings.verbosity = 3             # verbosity: errors (0), warnings (1), info (2), hints (3)
+sc.logging.print_header()
+sc.settings.set_figure_params(dpi=80, facecolor='white')
+
+adata=sc.read_loom("adMuscle_E12_DPT_071919.loom",sparse=False)
+
 #create and name data frames
 genes=adata.var.index
 sampTab=pd.DataFrame(adata.obs)
+sampTab.rename(columns={'psuedotime':'pseudotime'}, inplace=True)
 cells=list(sampTab.index.values)
-expDat=pd.DataFrame(adata.X).T
-expDat.columns=sampTab.index
-expDat.index=genes
-expDat=expDat.loc[expDat.sum(axis=1)!=0]
+#sampTab=pd.read_csv("sampTab.csv")
 
+#expDat=pd.DataFrame(adata.X).T
+#expDat.columns=sampTab.index
+#expDat.index=genes
+expDat=pd.read_csv("expDat.csv")
+
+expDat=expDat.loc[expDat.sum(axis=1)!=0]
+expDat.index=genes
+
+
+mmTFs=pd.read_csv("mmTFs")
+mmTFs=list(mmTFs["mmTFs"].values)
 ```
 ### Static Network Reconstruction
 Reconstruction occurs in three steps: 
@@ -138,3 +157,4 @@ dynTFs[1]=dynTFs[1][list(dynTFs[1].index.isin(tfstoplot))]
 hm_dyn(expSmoothed,dynTFs,topX=100)
 ```
 <img src="img/heatmap.png">
+
