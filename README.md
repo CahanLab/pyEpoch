@@ -81,7 +81,7 @@ DataFrameGenes=pd.DataFrame(xdyn[0]<pThresh)
 dgenes=DataFrameGenes[DataFrameGenes[0]==True].index.values
 
 # Reconstruct and perform optional crossweighting
-grnDF=reconstructGRN(expDat.iloc[dgenes,],zThresh=3)
+grnDF=reconstructGRN(expDat.loc[dgenes,:],zThresh=3)
 grnDF=crossweight(grnDF,expSmoothed=expDat)
 ```
 The object grnDF contains the reconstructed network. TG and TF refer to target gene and transcription factor respectively. The column "zscore" is the network prior to crossweighting. The column "weighted_score" is the network after crossweighting:
@@ -108,6 +108,7 @@ For a simpler approach, assign_epoch_simple() will define and assign epochs base
 xdyn=define_epochs(xdyn,expDat.loc[dgenes,:],method="pseudotime",num_epochs=2)
 epoch_assignments=assign_epochs(expSmoothed=expDat.loc[dgenes,], xdyn=xdyn, method="active_expression")
 
+
 dynamic_grn=epochGRN(grnDF, epoch_assignments)
 
 #     from      to            name
@@ -117,7 +118,7 @@ dynamic_grn=epochGRN(grnDF, epoch_assignments)
 
 
 # Example alternative:
-# epoch_assignments1=assign_epochs_simple(expSmoothed=expDat.loc[dgenes,],xdyn=xdyn,num_epochs=2)
+# epoch_assignments=assign_epochs_simple(expSmoothed=expDat.loc[dgenes,],xdyn=xdyn,num_epochs=2)
 ```
   The object dynamic_grn stores the dynamic network across epochs. The list includes active subnetworks at each epoch (in this example, "epoch1..epoch1" and "epoch2..epoch2") as well as potential transition networks (in this example, "epoch1..epoch2") describing how network topology transitions from one epoch to another.
 
@@ -147,14 +148,15 @@ Epoch contains various plotting tools to visualize dynamic activity of genes and
 This is particularly useful for verifying epoch assignments, and gauging how many epochs should occur in a trajectory
 ```Python
 # First, smooth expression for a cleaner plot
-ccells=xdyn[0]
+ccells=xdyn[1]
 expSmoothed=grnKsmooth(expDat,ccells,BW=.1)
 
 # Plot a heatmap of the dynamic TFs
-tfstoplot=list(set(list(mmTFs["mmTFs"].values))& set(dgenes))
+tfstoplot=list(set(mmTFs)& set(dgenes))
 dynTFs=xdyn
-dynTFs[1]=dynTFs[1][list(dynTFs[1].index.isin(tfstoplot))]
+dynTFs[0]=dynTFs[0][list(dynTFs[0].index.isin(tfstoplot))]
 hm_dyn(expSmoothed,dynTFs,topX=100)
 ```
 <img src="img/heatmap.png">
 
+plot_dynamic_network(dynamic_grn,mmTFs,only_TFs=True,order=["epoch1..epoch1","epoch1..epoch2","epoch2..epoch2"])
