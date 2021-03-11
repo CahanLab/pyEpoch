@@ -159,4 +159,11 @@ hm_dyn(expSmoothed,dynTFs,topX=100)
 ```
 <img src="img/heatmap.png">
 
+```Python
 plot_dynamic_network(dynamic_grn,mmTFs,only_TFs=True,order=["epoch1..epoch1","epoch1..epoch2","epoch2..epoch2"])
+```
+
+<img src="img/epoch_plot1.png">
+<img src="img/epoch_plot2.png">
+<img src="img/epoch_plot3.png">
+
