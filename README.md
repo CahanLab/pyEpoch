@@ -77,11 +77,11 @@ Reconstruction occurs in three steps:
 #Find Dynamically Expressed Genes
 xdyn=findDynGenes(expDat, sampTab, group_column="leiden",pseudotime_column="dpt_pseudotime")
 pThresh=0.05
-DataFrameGenes=pd.DataFrame(xdyn[0]<pThresh)
-dgenes=DataFrameGenes[DataFrameGenes[0]==True].index.values
+DataFrameGenes=pd.DataFrame(xdyn[0]["expression"]<pThresh)
+dgenes=DataFrameGenes[DataFrameGenes["expression"]==True].index.values
 
 # Reconstruct and perform optional crossweighting
-grnDF=reconstructGRN(expDat.loc[dgenes,:],zThresh=3)
+grnDF=reconstructGRN(expDat.loc[dgenes,:],mmTFs,zThresh=3)
 grnDF=crossweight(grnDF,expSmoothed=expDat)
 ```
 The object grnDF contains the reconstructed network. TG and TF refer to target gene and transcription factor respectively. The column "zscore" is the network prior to crossweighting. The column "weighted_score" is the network after crossweighting:
