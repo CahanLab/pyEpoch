@@ -13,31 +13,7 @@ Epoch leverages single-cell transcriptomic data, single-cell analysis methods, a
 import numpy as np
 import pandas as pd
 import scanpy as sc
-from pygam import GAM, s,l
-from scipy import stats
-from sklearn.metrics import normalized_mutual_info_score
-import scipy.signal as ss
-import math
 
-import igraph as igraph
-import networkx as nx
-import matplotlib.pyplot as plt
-from matplotlib.lines import Line2D
-import statsmodels.stats.multitest as multi;
-import researchpy as rp
-from bioinfokit.analys import get_data, stat
-from scipy import stats
-from sklearn import preprocessing
-import sys
-import skfda
-from skfda import FDataGrid
-from skfda.misc import kernels
-import skfda.preprocessing.smoothing.kernel_smoothers as ks
-import seaborn as sns
-
-from sklearn.preprocessing import KBinsDiscretizer
-from pyitlib import discrete_random_variable as drv
-from scipy import stats
 ```
 ### Load Data
 
