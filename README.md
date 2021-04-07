@@ -24,17 +24,18 @@ sc.settings.set_figure_params(dpi=80, facecolor='white')
 
 adata=sc.read_loom("adMuscle_E12_DPT_071919.loom",sparse=False)
 
+sc.pp.normalize_total(adata, target_sum=1e4)
+sc.pp.log1p(adata)
+sc.pp.scale(adata, max_value=10)
+
 #create and name data frames
 genes=adata.var.index
 sampTab=pd.DataFrame(adata.obs)
-sampTab.rename(columns={'psuedotime':'pseudotime'}, inplace=True)
 cells=list(sampTab.index.values)
-#sampTab=pd.read_csv("sampTab.csv")
 
-#expDat=pd.DataFrame(adata.X).T
-#expDat.columns=sampTab.index
-#expDat.index=genes
-expDat=pd.read_csv("expDat.csv")
+expDat=pd.DataFrame(adata.X).T
+expDat.columns=sampTab.index
+expDat.index=genes
 
 expDat=expDat.loc[expDat.sum(axis=1)!=0]
 expDat.index=genes
