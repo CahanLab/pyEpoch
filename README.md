@@ -13,6 +13,7 @@ Epoch leverages single-cell transcriptomic data, single-cell analysis methods, a
 import numpy as np
 import pandas as pd
 import scanpy as sc
+import pyEpoch as Epoch
 
 ```
 ### Load Data
@@ -29,13 +30,10 @@ sc.pp.log1p(adata)
 sc.pp.scale(adata, max_value=10)
 
 #create and name data frames
+expDat = Epoch.makeExpMat(adata)
+sampTab = Epoch.makeSampTab(adata)
 genes=adata.var.index
-sampTab=pd.DataFrame(adata.obs)
 cells=list(sampTab.index.values)
-
-expDat=pd.DataFrame(adata.X).T
-expDat.columns=sampTab.index
-expDat.index=genes
 
 expDat=expDat.loc[expDat.sum(axis=1)!=0]
 
@@ -50,14 +48,14 @@ Reconstruction occurs in three steps:
 3. Perform optional cross-weighting to refine network structure
 ``` Python
 #Find Dynamically Expressed Genes
-xdyn=findDynGenes(expDat, sampTab, group_column="leiden",pseudotime_column="dpt_pseudotime")
+xdyn=Epoch.findDynGenes(expDat, sampTab, group_column="leiden",pseudotime_column="dpt_pseudotime")
 pThresh=0.05
 DataFrameGenes=pd.DataFrame(xdyn[0]["expression"]<pThresh)
 dgenes=DataFrameGenes[DataFrameGenes["expression"]==True].index.values
 
 # Reconstruct and perform optional crossweighting
-grnDF=reconstructGRN(expDat.loc[dgenes,:],mmTFs,zThresh=3)
-grnDF=crossweight(grnDF,expSmoothed=expDat)
+grnDF=Epoch.reconstructGRN(expDat.loc[dgenes,:],mmTFs,zThresh=3)
+grnDF=Epoch.crossweight(grnDF,expSmoothed=expDat)
 ```
 The object grnDF contains the reconstructed network. TG and TF refer to target gene and transcription factor respectively. The column "zscore" is the network prior to crossweighting. The column "weighted_score" is the network after crossweighting:
 
@@ -80,11 +78,11 @@ Defining epochs can be done in a number of ways. Here we show an example with me
 For a simpler approach, assign_epoch_simple() will define and assign epochs based on maximum mean expression of a gene. This approach assumes genes cannot belong to more than one epoch.
 
 ```Python
-xdyn=define_epochs(xdyn,expDat.loc[dgenes,:],method="pseudotime",num_epochs=2)
-epoch_assignments=assign_epochs(expSmoothed=expDat.loc[dgenes,], xdyn=xdyn, method="active_expression")
+xdyn=Epoch.define_epochs(xdyn,expDat.loc[dgenes,:],method="pseudotime",num_epochs=2)
+epoch_assignments=Epoch.assign_epochs(expSmoothed=expDat.loc[dgenes,], xdyn=xdyn, method="active_expression")
 
 
-dynamic_grn=epochGRN(grnDF, epoch_assignments)
+dynamic_grn=Epoch.epochGRN(grnDF, epoch_assignments)
 
 #     from      to            name
 #0  epoch1  epoch2  epoch1..epoch2
@@ -93,7 +91,7 @@ dynamic_grn=epochGRN(grnDF, epoch_assignments)
 
 
 # Example alternative:
-# epoch_assignments=assign_epochs_simple(expSmoothed=expDat.loc[dgenes,],xdyn=xdyn,num_epochs=2)
+# epoch_assignments=Epoch.assign_epochs_simple(expSmoothed=expDat.loc[dgenes,],xdyn=xdyn,num_epochs=2)
 ```
   The object dynamic_grn stores the dynamic network across epochs. The list includes active subnetworks at each epoch (in this example, "epoch1..epoch1" and "epoch2..epoch2") as well as potential transition networks (in this example, "epoch1..epoch2") describing how network topology transitions from one epoch to another.
 
@@ -102,7 +100,7 @@ dynamic_grn=epochGRN(grnDF, epoch_assignments)
 We can use Epoch to identify the most influential regulators in the reconstructed dynamic (or static) network. Here's an example of accomplishing this via a PageRank approach on the dynamic network. 
 
 ```Python
-gene_rank=compute_pagerank(dynnet=dynamic_grn)
+gene_rank=Epoch.compute_pagerank(dynnet=dynamic_grn)
 ```
 The object gene_rank now contains a list of rankings for each epoch and transition network:
 
@@ -124,18 +122,18 @@ This is particularly useful for verifying epoch assignments, and gauging how man
 ```Python
 # First, smooth expression for a cleaner plot
 ccells=xdyn[1]
-expSmoothed=grnKsmooth(expDat,ccells,BW=.1)
+expSmoothed=Epoch.grnKsmooth(expDat,ccells,BW=.1)
 
 # Plot a heatmap of the dynamic TFs
 tfstoplot=list(set(mmTFs)& set(dgenes))
 dynTFs=xdyn
 dynTFs[0]=dynTFs[0][list(dynTFs[0].index.isin(tfstoplot))]
-hm_dyn(expSmoothed,dynTFs,topX=100)
+Epoch.hm_dyn(expSmoothed,dynTFs,topX=100)
 ```
 <img src="img/heatmap.png">
 
 ```Python
-plot_dynamic_network(dynamic_grn,mmTFs,only_TFs=True,order=["epoch1..epoch1","epoch1..epoch2","epoch2..epoch2"])
+Epoch.plot_dynamic_network(dynamic_grn,mmTFs,only_TFs=True,order=["epoch1..epoch1","epoch1..epoch2","epoch2..epoch2"])
 ```
 
 <img src="img/epoch_plot1.png">
