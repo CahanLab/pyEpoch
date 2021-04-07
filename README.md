@@ -38,8 +38,6 @@ expDat.columns=sampTab.index
 expDat.index=genes
 
 expDat=expDat.loc[expDat.sum(axis=1)!=0]
-expDat.index=genes
-
 
 mmTFs=pd.read_csv("mmTFs")
 mmTFs=list(mmTFs["mmTFs"].values)
