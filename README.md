@@ -39,7 +39,8 @@ Reconstruction occurs in three steps:
 3. Perform optional cross-weighting to refine network structure
 ``` Python
 #Find Dynamically Expressed Genes
-adata=Epoch.findDynGenes(adata, group_column="leiden",pseudotime_column="dpt_pseudotime")pThresh=0.05
+adata=Epoch.findDynGenes(adata, group_column="leiden",pseudotime_column="dpt_pseudotime")
+pThresh=0.05
 DataFrameGenes=pd.DataFrame(adata.uns["xdyn0"]["expression"]<pThresh)
 dgenes=DataFrameGenes[DataFrameGenes["expression"]==True].index.values
 
