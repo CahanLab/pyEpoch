@@ -22,7 +22,7 @@ import pyEpoch as Epoch
 sc.settings.verbosity = 3             # verbosity: errors (0), warnings (1), info (2), hints (3)
 sc.logging.print_header()
 sc.settings.set_figure_params(dpi=80, facecolor='white')
-adata=sc.read_loom("adMuscle_E12_DPT_071919.loom",sparse=False)
+adata=sc.read_loom("adMuscle_E12_DPT_071919.loom",sparse=False) #adata matrix cannot be sparse
 
 sc.pp.normalize_total(adata, target_sum=1e4)
 sc.pp.log1p(adata)
