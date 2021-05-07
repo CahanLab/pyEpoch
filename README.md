@@ -22,20 +22,11 @@ import pyEpoch as Epoch
 sc.settings.verbosity = 3             # verbosity: errors (0), warnings (1), info (2), hints (3)
 sc.logging.print_header()
 sc.settings.set_figure_params(dpi=80, facecolor='white')
-
 adata=sc.read_loom("adMuscle_E12_DPT_071919.loom",sparse=False)
 
 sc.pp.normalize_total(adata, target_sum=1e4)
 sc.pp.log1p(adata)
 sc.pp.scale(adata, max_value=10)
-
-#create and name data frames
-expDat = Epoch.makeExpMat(adata)
-sampTab = Epoch.makeSampTab(adata)
-genes=adata.var.index
-cells=list(sampTab.index.values)
-
-expDat=expDat.loc[expDat.sum(axis=1)!=0]
 
 mmTFs=pd.read_csv("mmTFs")
 mmTFs=list(mmTFs["mmTFs"].values)
@@ -48,19 +39,18 @@ Reconstruction occurs in three steps:
 3. Perform optional cross-weighting to refine network structure
 ``` Python
 #Find Dynamically Expressed Genes
-xdyn=Epoch.findDynGenes(expDat, sampTab, group_column="leiden",pseudotime_column="dpt_pseudotime")
-pThresh=0.05
-DataFrameGenes=pd.DataFrame(xdyn[0]["expression"]<pThresh)
+adata=Epoch.findDynGenes(adata, group_column="leiden",pseudotime_column="dpt_pseudotime")pThresh=0.05
+DataFrameGenes=pd.DataFrame(adata.uns["xdyn0"]["expression"]<pThresh)
 dgenes=DataFrameGenes[DataFrameGenes["expression"]==True].index.values
 
 # Reconstruct and perform optional crossweighting
-grnDF=Epoch.reconstructGRN(expDat.loc[dgenes,:],mmTFs,zThresh=3)
-grnDF=Epoch.crossweight(grnDF,expSmoothed=expDat)
+adata=Epoch.reconstructGRN(adata[:,dgenes],mmTFs,zThresh=3)
+adata=Epoch.crossweight(adata.uns["grnDF"],adata)
 ```
 The object grnDF contains the reconstructed network. TG and TF refer to target gene and transcription factor respectively. The column "zscore" is the network prior to crossweighting. The column "weighted_score" is the network after crossweighting:
 
 ```Python
-print(grnDF.iloc[0:5,:])
+print(adata.uns["grnDF"].iloc[0:5,:])
 
 #     TG      TF    zscore      corr    offset  weighted_score
 #0  Eya1    Myog  4.178345 -0.261096  2.365385        4.178345
@@ -78,11 +68,11 @@ Defining epochs can be done in a number of ways. Here we show an example with me
 For a simpler approach, assign_epoch_simple() will define and assign epochs based on maximum mean expression of a gene. This approach assumes genes cannot belong to more than one epoch.
 
 ```Python
-xdyn=Epoch.define_epochs(xdyn,expDat.loc[dgenes,:],method="pseudotime",num_epochs=2)
-epoch_assignments=Epoch.assign_epochs(expSmoothed=expDat.loc[dgenes,], xdyn=xdyn, method="active_expression")
+adata=Epoch.define_epochs(adata,method="pseudotime",num_epochs=2)
+adata=Epoch.assign_epochs(adata[:,dgenes],  method="active_expression")
 
 
-dynamic_grn=Epoch.epochGRN(grnDF, epoch_assignments)
+adata=Epoch.epochGRN(adata.uns['grnDF'], adata.uns['epochs'])
 
 #     from      to            name
 #0  epoch1  epoch2  epoch1..epoch2
@@ -91,7 +81,7 @@ dynamic_grn=Epoch.epochGRN(grnDF, epoch_assignments)
 
 
 # Example alternative:
-# epoch_assignments=Epoch.assign_epochs_simple(expSmoothed=expDat.loc[dgenes,],xdyn=xdyn,num_epochs=2)
+# adata=Epoch.assign_epochs_simple(adata[:,dgenes],num_epochs=2)
 ```
   The object dynamic_grn stores the dynamic network across epochs. The list includes active subnetworks at each epoch (in this example, "epoch1..epoch1" and "epoch2..epoch2") as well as potential transition networks (in this example, "epoch1..epoch2") describing how network topology transitions from one epoch to another.
 
@@ -100,12 +90,12 @@ dynamic_grn=Epoch.epochGRN(grnDF, epoch_assignments)
 We can use Epoch to identify the most influential regulators in the reconstructed dynamic (or static) network. Here's an example of accomplishing this via a PageRank approach on the dynamic network. 
 
 ```Python
-gene_rank=Epoch.compute_pagerank(dynnet=dynamic_grn)
+adata=Epoch.epochGRN(adata.uns['grnDF'], adata.uns['epochs'])
 ```
 The object gene_rank now contains a list of rankings for each epoch and transition network:
 
 ```Python
-print(gene_rank["epoch1..epoch2"].iloc[0:5,:])
+print(adata.uns["gene_rank"]["epoch1..epoch2"].iloc[0:5,:])
 #        gene  page_rank  is_regulator
 #Npm1    Npm1   0.062243          True
 #Pcna    Pcna   0.061330          True
@@ -121,19 +111,19 @@ Epoch contains various plotting tools to visualize dynamic activity of genes and
 This is particularly useful for verifying epoch assignments, and gauging how many epochs should occur in a trajectory
 ```Python
 # First, smooth expression for a cleaner plot
-ccells=xdyn[1]
+ccells=adata.uns["xdyn1"]
 expSmoothed=Epoch.grnKsmooth(expDat,ccells,BW=.1)
 
 # Plot a heatmap of the dynamic TFs
 tfstoplot=list(set(mmTFs)& set(dgenes))
-dynTFs=xdyn
-dynTFs[0]=dynTFs[0][list(dynTFs[0].index.isin(tfstoplot))]
+dynTFs=adata.uns["xdyn1"]
+dynTFs=dynTFs[list(dynTFs.index.isin(tfstoplot))]
 Epoch.hm_dyn(expSmoothed,dynTFs,topX=100)
 ```
 <img src="img/heatmap.png">
 
 ```Python
-Epoch.plot_dynamic_network(dynamic_grn,mmTFs,only_TFs=True,order=["epoch1..epoch1","epoch1..epoch2","epoch2..epoch2"])
+Epoch.plot_dynamic_network(adata.uns["GRN"],mmTFs,only_TFs=True,order=["epoch1..epoch1","epoch1..epoch2","epoch2..epoch2"])
 ```
 
 <img src="img/epoch_plot1.png">
