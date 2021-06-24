@@ -14,8 +14,10 @@ import scipy.signal as ss
 # In[ ]:
 
 
-def crossweight(grnDF, adata):
-   
+def crossweight(adata):
+
+    grnDF = adata.uns['grnDF']
+
     genes=adata.var.index
     expDat=pd.DataFrame(adata.X).T
     expDat.columns=adata.obs.index
@@ -36,6 +38,7 @@ def crossweight(grnDF, adata):
         weighted_scores.append(new)
     grnDF["weighted_score"]=weighted_scores
     adata.uns["grnDF"]=grnDF
+    print("Done. Cross-weighted and updated GRN stored in .uns['grnDF'].")
     return adata
 
 

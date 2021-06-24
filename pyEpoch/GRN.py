@@ -75,7 +75,7 @@ def findDynGenes(adata, group_column="leiden", pseudotime_column="dpt_pseudotime
     print("starting gamma...")
     #print(expDat[t1C.index])
     gpChr=pd.DataFrame(gamFit(expDat[t1C.index],expDat.index,t1))
-    gpChr.columns=["expression"]
+    gpChr.columns=["dynamic_pval"]
     
 
     cells=pd.DataFrame()
@@ -85,9 +85,9 @@ def findDynGenes(adata, group_column="leiden", pseudotime_column="dpt_pseudotime
     cells.index=cells["cell_name"]
     cells=cells.sort_values(by="pseudotime")
     #ans=list([gpChr,cells])
-    adata.uns["xdyn0"]=gpChr
-    adata.uns["xdyn1"]=cells
-    print("Done. Enjoy your dynamic genes!!!")
+    adata.uns["genes"]=gpChr
+    adata.uns["cells"]=cells
+    print("Done. Dynamic pvalues stored in .uns['genes']. Ordered cells and pseudotime stored in .uns['cells'].")
     return adata
 
 
@@ -177,9 +177,13 @@ def clr(mim):
 # In[ ]:
 
 
-def reconstructGRN(adata,tfs,zThresh,method="pearson"):
-#def reconstructGRN(exp,tfs,zThresh,method="pearson"):
-    #expDat.index=genes
+def reconstructGRN(adata,tfs,pThresh=0.05,zThresh=0,method="pearson"):
+    # limit adata to dynamic genes
+    DataFrameGenes=pd.DataFrame(adata.uns["genes"]["dynamic_pval"]<pThresh)
+    dgenes=DataFrameGenes[DataFrameGenes["dynamic_pval"]==True].index.values
+    adata = adata[:,dgenes]
+
+    # reconstruct
     genes=adata.var.index
     expDat=pd.DataFrame(adata.X).T
     expDat.columns=adata.obs.index
@@ -196,6 +200,7 @@ def reconstructGRN(adata,tfs,zThresh,method="pearson"):
     xcorr=xcorr[tfsI]
     grn=cn_extractRegsDF(xnet,xcorr,zThresh)
     adata.uns["grnDF"]=grn
+    print("Done. Static GRN stored in .uns['grnDF']")
     return adata
 
 

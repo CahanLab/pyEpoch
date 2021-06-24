@@ -40,13 +40,10 @@ Reconstruction occurs in three steps:
 ``` Python
 #Find Dynamically Expressed Genes
 adata=Epoch.findDynGenes(adata, group_column="leiden",pseudotime_column="dpt_pseudotime")
-pThresh=0.05
-DataFrameGenes=pd.DataFrame(adata.uns["xdyn0"]["expression"]<pThresh)
-dgenes=DataFrameGenes[DataFrameGenes["expression"]==True].index.values
 
 # Reconstruct and perform optional crossweighting
-adata=Epoch.reconstructGRN(adata[:,dgenes],mmTFs,zThresh=3)
-adata=Epoch.crossweight(adata.uns["grnDF"],adata)
+adata=Epoch.reconstructGRN(adata,mmTFs,pThresh=0.05,zThresh=3)
+adata=Epoch.crossweight(adata)
 ```
 The object grnDF contains the reconstructed network. TG and TF refer to target gene and transcription factor respectively. The column "zscore" is the network prior to crossweighting. The column "weighted_score" is the network after crossweighting:
 
@@ -70,10 +67,10 @@ For a simpler approach, assign_epoch_simple() will define and assign epochs base
 
 ```Python
 adata=Epoch.define_epochs(adata,method="pseudotime",num_epochs=2)
-adata=Epoch.assign_epochs(adata[:,dgenes],  method="active_expression")
+adata=Epoch.assign_epochs(adata,method="active_expression")
 
 
-adata=Epoch.epochGRN(adata.uns['grnDF'], adata.uns['epochs'])
+adata=Epoch.epochGRN(adata)
 
 #     from      to            name
 #0  epoch1  epoch2  epoch1..epoch2
@@ -91,7 +88,7 @@ adata=Epoch.epochGRN(adata.uns['grnDF'], adata.uns['epochs'])
 We can use Epoch to identify the most influential regulators in the reconstructed dynamic (or static) network. Here's an example of accomplishing this via a PageRank approach on the dynamic network. 
 
 ```Python
-adata=Epoch.epochGRN(adata.uns['grnDF'], adata.uns['epochs'])
+adata=Epoch.compute_pagerank(adata,weight_column="weighted_score")
 ```
 The object gene_rank now contains a list of rankings for each epoch and transition network:
 
@@ -112,19 +109,19 @@ Epoch contains various plotting tools to visualize dynamic activity of genes and
 This is particularly useful for verifying epoch assignments, and gauging how many epochs should occur in a trajectory
 ```Python
 # First, smooth expression for a cleaner plot
-ccells=adata.uns["xdyn1"]
+ccells=adata.uns["cells"]
 expSmoothed=Epoch.grnKsmooth(expDat,ccells,BW=.1)
 
 # Plot a heatmap of the dynamic TFs
 tfstoplot=list(set(mmTFs)& set(dgenes))
-dynTFs=adata.uns["xdyn1"]
+dynTFs=adata.uns["cells"]
 dynTFs=dynTFs[list(dynTFs.index.isin(tfstoplot))]
 Epoch.hm_dyn(expSmoothed,dynTFs,topX=100)
 ```
 <img src="img/heatmap.png">
 
 ```Python
-Epoch.plot_dynamic_network(adata.uns["GRN"],mmTFs,only_TFs=True,order=["epoch1..epoch1","epoch1..epoch2","epoch2..epoch2"])
+Epoch.plot_dynamic_network(adata.uns["dynamic_GRN"],mmTFs,only_TFs=True,order=["epoch1..epoch1","epoch1..epoch2","epoch2..epoch2"])
 ```
 
 <img src="img/epoch_plot1.png">

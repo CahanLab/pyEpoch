@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[ ]:
+
 
 
 import numpy as np
@@ -14,9 +14,7 @@ import statsmodels.stats.multitest as multi
 import igraph as igraph
 
 
-# In[1]:
-
-def define_epochs(adata,method,num_epochs,group_assignments=None):
+def define_epochs(adata,method,num_epochs=2,pseudotime_cuts=None,group_assignments=None):
     
     #genes=adata.var.index
     #expDat=pd.DataFrame(adata.X).T
@@ -27,8 +25,8 @@ def define_epochs(adata,method,num_epochs,group_assignments=None):
     #dyn_expDat=expDat.loc[dgenes,:]
     
     if method=="cell_order":
-        t1=adata.uns['xdyn1']["pseudotime"]
-        t1.index=list(adata.uns['xdyn1']["cell_name"].values)
+        t1=adata.uns['cells']["pseudotime"]
+        t1.index=list(adata.uns['cells']["cell_name"].values)
         t1=t1.sort_values(ascending=True)
         chunk_size=math.floor(len(t1)/num_epochs)
 
@@ -47,23 +45,29 @@ def define_epochs(adata,method,num_epochs,group_assignments=None):
         for i in epochs:
             for j in numbers:
                 if i==j:
-                    epoch_names.append("Epoch"+str(j))
+                    epoch_names.append("epoch"+str(j))
 
-        adata.uns['xdyn1']["epochs"]=epoch_names
-        return xdyn
+        adata.uns['cells']["epoch"]=epoch_names
+        print("Done. Updated ordered cells with epoch assignments stored in .uns['cells'].")
+        return adata
 
     if method=="pseudotime":
-        pseudotime_cuts=np.linspace(0, np.max(adata.uns['xdyn1']["pseudotime"]),num_epochs+1)
-        pseudotime_cuts=pseudotime_cuts[1:]
-        pseudotime_cuts=pseudotime_cuts[:(len(pseudotime_cuts)-1)]
-        pseudotime_cuts=pseudotime_cuts.tolist()
-        a=split_epochs_by_pseudotime(adata,pseudotime_cuts)
+        if (pseudotime_cuts!=None):
+            a = split_epochs_by_pseudotime(adata,pseudotime_cuts)
+        else:
+            pseudotime_cuts=np.linspace(0, np.max(adata.uns['cells']["pseudotime"]),num_epochs+1)
+            pseudotime_cuts=pseudotime_cuts[1:]
+            pseudotime_cuts=pseudotime_cuts[:(len(pseudotime_cuts)-1)]
+            pseudotime_cuts=pseudotime_cuts.tolist()
+            a=split_epochs_by_pseudotime(adata,pseudotime_cuts)
+        print("Done. Updated ordered cells with epoch assignments stored in .uns['cells'].")
         return a
 
     if method=="group":
         if group_assignments==None:
             sys.exit("Must provide group_assignments for group method.")
         a=split_epochs_by_group(adata,group_assignments)
+        print("Done. Updated ordered cells with epoch assignments stored in .uns['cells'].")
         return a
 
 
@@ -71,7 +75,7 @@ def define_epochs(adata,method,num_epochs,group_assignments=None):
 # In[2]:
 
 def split_epochs_by_pseudotime(adata,pseudotime_cuts,epoch_names2=None):
-    sampTab=adata.uns['xdyn1']
+    sampTab=adata.uns['cells']
     if max(pseudotime_cuts)>max(sampTab["pseudotime"]):
         sys.exit("Cuts must be within pseudotime.")
     if (epoch_names2!=None):
@@ -88,7 +92,7 @@ def split_epochs_by_pseudotime(adata,pseudotime_cuts,epoch_names2=None):
         b=sampTab.loc[(sampTab['pseudotime']>=pseudotime_cuts[i]) & (sampTab['pseudotime']<pseudotime_cuts[i+1])]
         for j in np.arange(b.shape[0]):
             epoch.append("epoch"+str(i+1))
-    adata.uns['xdyn1']["epochs"]=epoch
+    adata.uns['cells']["epoch"]=epoch
     return adata
 
 # In[3]:
@@ -96,7 +100,7 @@ def split_epochs_by_pseudotime(adata,pseudotime_cuts,epoch_names2=None):
 
 #split_epochs_by_group<-function(dynRes,assignment)
 def split_epochs_by_group(adata,group_assignments):
-    adata.uns['xdyn1']["epochs"]=group_assignments
+    adata.uns['cells']["epoch"]=group_assignments
     return adata
 
 
@@ -116,7 +120,7 @@ def assign_epochs(adata, method="active_expression",pThresh_dyn=.05,pThresh_DE=.
     expDat.columns=adata.obs.index
     expDat.index=genes
     expDat=expDat.loc[expDat.sum(axis=1)!=0]
-    exp=expDat.loc[adata.uns['xdyn0'].loc[adata.uns['xdyn0']["expression"]<pThresh_dyn].index,]
+    exp=expDat.loc[adata.uns['genes'].loc[adata.uns['genes']["dynamic_pval"]<pThresh_dyn].index,]
 
     if toScale==True:
         save_genes=exp.index
@@ -125,7 +129,7 @@ def assign_epochs(adata, method="active_expression",pThresh_dyn=.05,pThresh_DE=.
         exp.index=save_genes
         exp.columns=save_cells
 
-    epoch_names=list(adata.uns['xdyn1']["epochs"].unique())
+    epoch_names=list(adata.uns['cells']["epoch"].unique())
     epochs={}
     for i in epoch_names:
         epochs[i]=None
@@ -153,7 +157,7 @@ def assign_epochs(adata, method="active_expression",pThresh_dyn=.05,pThresh_DE=.
 
     if method=="active_expression":
         for i in list(epochs.keys()):
-            chunk_cells=list(adata.uns['xdyn1'].loc[adata.uns['xdyn1']["epochs"]==i]["cell_name"])
+            chunk_cells=list(adata.uns['cells'].loc[adata.uns['cells']["epoch"]==i]["cell_name"])
             chunk=exp[chunk_cells]
             chunk_df=pd.DataFrame(np.mean(chunk,axis=1),columns=["means"],index=np.mean(chunk,axis=1).index)
             chunk_df=pd.concat([chunk_df,thresholds],axis=1)
@@ -168,7 +172,7 @@ def assign_epochs(adata, method="active_expression",pThresh_dyn=.05,pThresh_DE=.
     else:
         for i in list(epochs.keys()):
             #i=list(epochs.keys())[0]
-            chunk_cells=list(adata.uns['xdyn1'].loc[adata.uns['xdyn1']["epochs"]==i]["cell_name"])
+            chunk_cells=list(adata.uns['cells'].loc[adata.uns['cells']["epoch"]==i]["cell_name"])
             chunk=exp[chunk_cells]
             column_names=list(np.setdiff1d(list(exp.columns),chunk_cells))
             background=exp[column_names]
@@ -215,7 +219,7 @@ def assign_epochs(adata, method="active_expression",pThresh_dyn=.05,pThresh_DE=.
 # In[5]:
 
 
-def assign_epochs_simple(adata,num_epochs=2,pThresh=.01,toScale=False):
+def assign_epochs_simple(adata,num_epochs=2,pThresh_dyn=.01,toScale=False):
     #num_epochs=2
     #pThresh=.01
     #toScale=False
@@ -227,7 +231,7 @@ def assign_epochs_simple(adata,num_epochs=2,pThresh=.01,toScale=False):
     expDat.index=genes
     expDat=expDat.loc[expDat.sum(axis=1)!=0]
     #limit to dynamically expressed genes
-    exp=expDat.loc[adata.uns['xdyn0'].loc[adata.uns['xdyn0']["expression"]<pThresh].index,]
+    exp=expDat.loc[adata.uns['genes'].loc[adata.uns['genes']["expression"]<pThresh_dyn].index,]
 
     if toScale==True:
         save_genes=exp.index
@@ -259,8 +263,8 @@ def assign_epochs_simple(adata,num_epochs=2,pThresh=.01,toScale=False):
 
     # order cells in exp along pseudotime-- cells ordered in dynRes
     t1=pd.DataFrame()
-    t1["pseudotime"]=adata.uns['xdyn1']["pseudotime"]
-    t1.index=adata.uns['xdyn1']["cell_name"]
+    t1["pseudotime"]=adata.uns['cells']["pseudotime"]
+    t1.index=adata.uns['cells']["cell_name"]
 
     t1=t1.sort_values(by=['pseudotime'])
     exp=exp[t1.index]
@@ -268,14 +272,14 @@ def assign_epochs_simple(adata,num_epochs=2,pThresh=.01,toScale=False):
     mean_expression=pd.DataFrame(columns=["gene","epoch","mean_expression","peakTime"])
 
     #divide epochs by psuedotime
-    epoch_names=list(adata.uns['xdyn1']["epochs"].unique())
+    epoch_names=list(adata.uns['cells']["epochs"].unique())
     epochs={}
     for i in epoch_names:
         epochs[i]=None
 
     # determine activity based on average expression in each epoch
-    ptmax=np.max(adata.uns['xdyn1']["pseudotime"])
-    ptmin=np.min(adata.uns['xdyn1']["pseudotime"])
+    ptmax=np.max(adata.uns['cells']["pseudotime"])
+    ptmin=np.min(adata.uns['cells']["pseudotime"])
     chunk_size=(ptmax-ptmin)/num_epochs
 
     #cellsEps=pd.DataFrame()
@@ -294,7 +298,7 @@ def assign_epochs_simple(adata,num_epochs=2,pThresh=.01,toScale=False):
         upper_bound=ptmin+((i)*chunk_size)
         #chunk_cells
         #chunk_cells<-rownames(dynRes$cells[dynRes$cells$pseudotime>=lower_bound & dynRes$cells$pseudotime<=upper_bound,])
-        chunk_cells=list(adata.uns['xdyn1'].loc[(adata.uns['xdyn1']['pseudotime'] >= lower_bound) & (adata.uns['xdyn1']['pseudotime'] <= upper_bound)]["cell_name"])
+        chunk_cells=list(adata.uns['cells'].loc[(adata.uns['cells']['pseudotime'] >= lower_bound) & (adata.uns['cells']['pseudotime'] <= upper_bound)]["cell_name"])
         chunk=exp[chunk_cells]
         chunk_df=pd.DataFrame()
         chunk_df["means"]=np.mean(chunk,axis=1)
@@ -303,7 +307,7 @@ def assign_epochs_simple(adata,num_epochs=2,pThresh=.01,toScale=False):
         epochs[list(epochs.keys())[i-1]]=list(chunk_df.loc[chunk_df["active"]==True]["genes"])
         genesPeakTimes=chunk.apply(np.argmax,axis=1)
 
-        gpt=adata.uns['xdyn1'][adata.uns['xdyn1'].cell_name.isin(chunk_cells)].iloc[genesPeakTimes.values]["pseudotime"]
+        gpt=adata.uns['cells'][adata.uns['cells'].cell_name.isin(chunk_cells)].iloc[genesPeakTimes.values]["pseudotime"]
 
 
 
@@ -348,9 +352,9 @@ def assign_epochs_simple(adata,num_epochs=2,pThresh=.01,toScale=False):
     geneDF["epoch"]=eps.values()
     geneDF["peakTime"]=geneEpPT.values()
     geneDF["epMean"]=epMean.values()
-    geneDF["pval"]=adata.uns['xdyn0'].loc[genes]["expression"].values
+    geneDF["pval"]=adata.uns['genes'].loc[genes]["expression"].values
 
-    cells2=adata.uns['xdyn1'].loc[adata.uns['xdyn1']["cell_name"].isin(t1.index)]
+    cells2=adata.uns['cells'].loc[adata.uns['cells']["cell_name"].isin(t1.index)]
     cells2["epoch"]=cellsEps.values()
 
     epochs["mean_expression"]=mean_expression
@@ -361,14 +365,11 @@ def assign_epochs_simple(adata,num_epochs=2,pThresh=.01,toScale=False):
 # In[ ]:
 
 
-def epochGRN(grnDF, epochs, epoch_network=None):
-    #epoch_network=None
-    #epochs=epoch_assignments
+def epochGRN(adata, epoch_network=None):
     
-    #keys=epochs.keys()
-    #for i in keys:
-    #    if i=="mean_expression":
-    #        del epochs["mean_expression"]
+    grnDF = adata.uns['grnDF']
+    epochs = adata.uns['epochs']
+
     epochs.pop('mean_expression', None)
     keys=epochs.keys()
 
@@ -431,17 +432,16 @@ def epochGRN(grnDF, epochs, epoch_network=None):
             temp=temp[~c]
 
         GRN[epoch_network["name"][i]]=temp
-    adata.uns["GRN"]=GRN
+    adata.uns["dynamic_GRN"]=GRN
+    print("Done. Dynamic GRN stored in .uns['dynamic_GRN'].")
     return adata
 
 
 # In[ ]:
 
 
-def compute_pagerank(dynnet,weight_column="weighted_score",directed_graph=False):
-    #dynnet=dynamic_grn
-    #weight_column="weighted_score"
-    #directed_graph=False
+def compute_pagerank(adata,weight_column="weighted_score",directed_graph=False):
+    dynnet = adata.uns['dynamic_GRN']
 
     keys=list(dynnet.keys())
     ranks={}
