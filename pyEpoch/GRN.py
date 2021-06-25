@@ -97,7 +97,6 @@ def findDynGenes(adata, group_column="leiden", pseudotime_column="dpt_pseudotime
 #def build_mim(exp,estimator="pearson"):
 def build_mim(exp,estimator="pearson"):
     genes=exp.index
-    
     if estimator=="pearson":
         est=KBinsDiscretizer(n_bins=int(np.sqrt(exp.shape[0])),encode='ordinal',strategy="uniform")
         est.fit(exp.T)
@@ -114,33 +113,33 @@ def build_mim(exp,estimator="pearson"):
         mim.columns=genes
         return mim
     elif estimator=="MI":
+        print('discretize')
         est=KBinsDiscretizer(n_bins=int(np.sqrt(exp.shape[0])),encode='ordinal',strategy="uniform")
         est.fit(exp.T)
         dataset=est.transform(exp.T)
-        dataset=pd.DataFrame(dataset)
+        #dataset=pd.DataFrame(dataset)
         #dataset=dataset+1
-        mim=pd.DataFrame()#create empty mim dataframe
+        #mim=pd.DataFrame()#create empty mim dataframe
         #create dataframe with mutual infrormation for each gene pair 
         #texp is the expression matrix with the genes as columns and the samples as rows
-        for i in dataset.columns:
-            throwaway=[]
-            for j in dataset.columns:
-                a=dataset[i] 
-                b=dataset[j]
-                mi_pair=normalized_mutual_info_score(a,b)
-                throwaway.append(mi_pair)
-            mim[i]=throwaway
-        mim=mim.set_index(dataset.columns)
-        mim=mim.replace(1, 0)  # for replacing 1 to 0
+        print("MI")
+        #mim = np.array([[normalized_mutual_info_score(dataset[:,i],dataset[:,j]) for i in range(dataset.shape[1])] for j in range(dataset.shape[1])])
+        mi = [[normalized_mutual_info_score(dataset[:,i],dataset[:,j]) for i in range(0,j+1)] for j in range(dataset.shape[1])]
+        mim = np.zeros((dataset.shape[1],dataset.shape[1]))
+        mask = np.tril(np.ones((dataset.shape[1],dataset.shape[1])),0) != 0
+        mim[mask]=np.concatenate(mi)
+
+        i_upper = np.triu_indices(dataset.shape[1], 0)
+        mim[i_upper] = mim.T[i_upper]
+        np.fill_diagonal(mim,0)
+
+        print("format")
+        mim = pd.DataFrame(mim)
+        #mim=mim.set_index(dataset.columns)
+        #mim=mim.replace(1, 0)  # for replacing 1 to 0
         mim.index=genes
         mim.columns=genes
         return mim
-        #return dataset
-        #dataset= dataset.astype('int32') 
-        #a=drv.information_mutual_normalised(dataset)
-        #dataset.dtype
-        #mim=pd.DataFrame(a)
-        #return a
     else:
         sys.exit("Must enter valid estimator: MI or pearson.")
 
