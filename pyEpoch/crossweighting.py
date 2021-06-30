@@ -14,7 +14,7 @@ import scipy.signal as ss
 # In[ ]:
 
 
-def crossweight(adata):
+def crossweight(adata,weightThresh=0):
 
     grnDF = adata.uns['grnDF']
 
@@ -37,6 +37,7 @@ def crossweight(adata):
         new=score_offset(grnDF["zscore"][i],grnDF["offset"][i],expSmoothed)
         weighted_scores.append(new)
     grnDF["weighted_score"]=weighted_scores
+    grnDF = grnDF[grnDF["weighted_score"]>weightThresh]
     adata.uns["grnDF"]=grnDF
     print("Done. Cross-weighted and updated GRN stored in .uns['grnDF'].")
     return adata

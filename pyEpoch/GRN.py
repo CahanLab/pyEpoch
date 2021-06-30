@@ -198,6 +198,7 @@ def reconstructGRN(adata,tfs,pThresh=0.05,zThresh=0,method="pearson"):
     xnet=xnet[tfsI]
     xcorr=xcorr[tfsI]
     grn=cn_extractRegsDF(xnet,xcorr,zThresh)
+    grn = grn[grn['zscore']>zThresh]
     adata.uns["grnDF"]=grn
     print("Done. Static GRN stored in .uns['grnDF']")
     return adata
@@ -239,5 +240,5 @@ def cn_extractRegsDF(xnet, xcorr,zThresh):
     grn["TG"]=targets
     grn["TF"]=regulators
     grn["zscore"]=zscoresX
-    grn["Correlation"]=correlations
+    grn["corr"]=correlations
     return grn
