@@ -195,8 +195,8 @@ def reconstructGRN(adata,tfs,pThresh=0.05,zThresh=0,method="pearson"):
     xcorr=texp.corr()
     tfsI= list(set(tfs) & set(texp.columns))
     #print(tfsI)
-    xnet=xnet[tfsI]
-    xcorr=xcorr[tfsI]
+    xnet=xnet.loc[tfsI]
+    xcorr=xcorr.loc[tfsI]
     grn=cn_extractRegsDF(xnet,xcorr,zThresh)
     grn = grn[grn['zscore']>zThresh]
     adata.uns["grnDF"]=grn
