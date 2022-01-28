@@ -48,7 +48,7 @@ def gamFit(expMat,genes,celltime):
 def findDynGenes(adata, group_column="leiden", pseudotime_column="dpt_pseudotime"):
     
     sampTab=pd.DataFrame(adata.obs)
-    sampTab.rename(columns={'psuedotime':'pseudotime'}, inplace=True)
+    #sampTab.rename(columns={'psuedotime':'pseudotime'}, inplace=True)
     
     genes=adata.var.index
     expDat=pd.DataFrame(adata.X).T
@@ -61,7 +61,7 @@ def findDynGenes(adata, group_column="leiden", pseudotime_column="dpt_pseudotime
     sampTab["dpt_groups"]=sampTab[group_column]
     sampTab["pseudotime"]=sampTab[pseudotime_column]
     sampTab["cell_name"]=sampTab.index
-    path=np.unique(sampTab["leiden"])
+    path=np.unique(sampTab["dpt_groups"])
     ids=[]
     for grp in path:
         a=sampTab.loc[sampTab["dpt_groups"]==grp]

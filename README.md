@@ -1,12 +1,23 @@
 # pyEpoch
 
-Gene regulatory network reconstruction from scRNA-seq data. This program was translated from R to Python to be compatible with SCAN-PY
+Dynamic gene regulatory network reconstruction from scRNA-seq data. See the original R version [here](https://github.com/pcahan1/epoch): 
 
 
 ## Introduction
-Epoch leverages single-cell transcriptomic data, single-cell analysis methods, and graph theoretic approaches to elucidate GRN structure and dynamic activity. 
+Epoch leverages single-cell transcriptomic data, single-cell analysis methods, and graph theoretic approaches to reconstruct dynamic GRNs. Additionally, Epoch contains functionality for top regulator prediction, network comparision, signaling pathway integration, amongst others. Here we show some examples of Epoch in action.
 
-## Example Walk Thru 0: The Basics
+For a more in depth look at Epoch, and to see how we applied it to elucidate signaling-induced GRN topology changes in early mouse embryonic stem cell (ESC) directed differentiation, check out our [preprint here](https://www.biorxiv.org/content/10.1101/2021.05.06.443021v2).
+
+
+The datasets used in the following examples are available in the Data folder.
+
+1. [Example 0: The Basics, E12.5 Mouse Muscle Development](#example0)
+2. [Example 1: Network Reconstruction and Signaling Integration, mESC Directed Differentiation](#example1)
+
+
+
+## Example Walk Thru 0: The Basics <a name="example0"></a>
+This is data from E12.5 mouse muscle development. Here we show the basics of Epoch-- how to use it to reconstruct and dynamic network. 
 
 ### Set up
 ```Python
@@ -28,7 +39,7 @@ sc.pp.normalize_total(adata, target_sum=1e4)
 sc.pp.log1p(adata)
 sc.pp.scale(adata, max_value=10)
 
-mmTFs=pd.read_csv("mmTFs")
+mmTFs=pd.read_csv("mmTFs_epoch.csv")
 mmTFs=list(mmTFs["mmTFs"].values)
 ```
 ### Static Network Reconstruction
@@ -45,7 +56,7 @@ adata=Epoch.findDynGenes(adata, group_column="leiden",pseudotime_column="dpt_pse
 adata=Epoch.reconstructGRN(adata,mmTFs,pThresh=0.05,zThresh=3)
 adata=Epoch.crossweight(adata)
 ```
-The object grnDF contains the reconstructed network. TG and TF refer to target gene and transcription factor respectively. The column "zscore" is the network prior to crossweighting. The column "weighted_score" is the network after crossweighting:
+The reconstructed network is stored in adata.uns['grnDF']. TG and TF refer to target gene and transcription factor respectively. The column "zscore" is the network prior to crossweighting. The column "weighted_score" is the network after crossweighting:
 
 ```Python
 print(adata.uns["grnDF"].iloc[0:5,:])
@@ -81,7 +92,7 @@ adata=Epoch.epochGRN(adata)
 # Example alternative:
 # adata=Epoch.assign_epochs_simple(adata[:,dgenes],num_epochs=2)
 ```
-  The object dynamic_grn stores the dynamic network across epochs. The list includes active subnetworks at each epoch (in this example, "epoch1..epoch1" and "epoch2..epoch2") as well as potential transition networks (in this example, "epoch1..epoch2") describing how network topology transitions from one epoch to another.
+  The dynamic network across epochs is stored in adata.uns['dynamic_grn']. The list includes active subnetworks at each epoch (in this example, "epoch1..epoch1" and "epoch2..epoch2") as well as potential transition networks (in this example, "epoch1..epoch2") describing how network topology transitions from one epoch to another.
 
 
 ### Influential TFs
@@ -90,7 +101,7 @@ We can use Epoch to identify the most influential regulators in the reconstructe
 ```Python
 adata=Epoch.compute_pagerank(adata,weight_column="weighted_score")
 ```
-The object gene_rank now contains a list of rankings for each epoch and transition network:
+adata.uns['gene_rank'] now contains a list of rankings for each epoch and transition network:
 
 ```Python
 print(adata.uns["gene_rank"]["epoch1..epoch2"].iloc[0:5,:])
@@ -127,4 +138,78 @@ Epoch.plot_dynamic_network(adata.uns["dynamic_GRN"],mmTFs,only_TFs=True,order=["
 <img src="img/epoch_plot1.png">
 <img src="img/epoch_plot2.png">
 <img src="img/epoch_plot3.png">
+
+
+
+## Example Walk Thru 1: Network Reconstruction and Signaling integration <a name="example1"></a>
+This data is unpublished data from our lab. It is sampled from day 0 through day 4 mESC directed differentiation toward mesodermal fate guided by Wnt3a, Activin A, and GSKi. It has already been normalized, and the varying genes have been identified. It has also been clustered, and analyzed with RNA Velocity.
+
+### Set up
+```Python
+import numpy as np
+import pandas as pd
+import scanpy as sc
+import pyEpoch as Epoch
+
+```
+### Load Data
+
+```Python
+adata=sc.read_loom("sampled_mesoderm_WAG.loom",sparse=False) #adata matrix cannot be sparse
+adata.var_names=adata.var['var_names']
+adata.obs_names=adata.obs['obs_names']
+adata.X = adata.X.todense()
+
+mmTFs=pd.read_csv("mmTFs_epoch.csv")
+mmTFs=list(mmTFs["mmTFs"].values)
+```
+### Static Network Reconstruction
+Reconstruction occurs in three steps: 
+
+1. Find dynamically expressed genes
+2. Infer edges across dynamic genes using CLR (or other supported method)
+3. Perform optional cross-weighting to refine network structure
+``` Python
+#Find Dynamically Expressed Genes
+adata=Epoch.findDynGenes(adata, group_column="cluster",pseudotime_column="latent_time")
+
+# Reconstruct and perform optional crossweighting
+adata=Epoch.reconstructGRN(adata,mmTFs,pThresh=0.05,zThresh=3)
+adata=Epoch.crossweight(adata)
+```
+The reconstructed network is stored in adata.uns['grnDF']. TG and TF refer to target gene and transcription factor respectively. The column "zscore" is the network prior to crossweighting. The column "weighted_score" is the network after crossweighting:
+
+```Python
+print(adata.uns["grnDF"].iloc[0:5,:])
+
+```
+
+### Dynamic Network Extraction
+Here we define and assign epochs based on pseudotime. For more options see example 0 above. 
+
+```Python
+adata=Epoch.define_epochs(adata,method="pseudotime",num_epochs=3)
+adata=Epoch.assign_epochs(adata,method="active_expression")
+
+
+adata=Epoch.epochGRN(adata)
+
+```
+The dynamic network across epochs is stored in adata.uns['dynamic_grn'].
+
+
+### Influential TFs
+```Python
+adata=Epoch.compute_pagerank(adata,weight_column="weighted_score")
+```
+adata.uns['gene_rank'] now contains a list of rankings for each epoch and transition network.
+
+```Python
+print(adata.uns["gene_rank"]["epoch1..epoch2"].iloc[0:5,:])
+
+
+```
+
+
+
 
