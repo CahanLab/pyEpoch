@@ -52,8 +52,11 @@ Reconstruction occurs in three steps:
 #Find Dynamically Expressed Genes
 adata=Epoch.findDynGenes(adata, group_column="leiden",pseudotime_column="dpt_pseudotime")
 
+# Optional: to analyze a subset of the data along a particular path you can specify the path
+# adata=Epoch.findDynGenes(adata, group_column="leiden", path=['1','0'], pseudotime_column="dpt_pseudotime")
+
 # Reconstruct and perform optional crossweighting
-adata=Epoch.reconstructGRN(adata,mmTFs,pThresh=0.05,zThresh=3)
+adata=Epoch.reconstructGRN(adata,mmTFs,zThresh=3)
 adata=Epoch.crossweight(adata)
 ```
 The reconstructed network is stored in adata.uns['grnDF']. TG and TF refer to target gene and transcription factor respectively. The column "zscore" is the network prior to crossweighting. The column "weighted_score" is the network after crossweighting:
@@ -120,14 +123,10 @@ Epoch contains various plotting tools to visualize dynamic activity of genes and
 This is particularly useful for verifying epoch assignments, and gauging how many epochs should occur in a trajectory
 ```Python
 # First, smooth expression for a cleaner plot
-ccells=adata.uns["cells"]
-expSmoothed=Epoch.grnKsmooth(expDat,ccells,BW=.1)
+adata=Epoch.grnKsmooth(adata,BW=.1)
 
 # Plot a heatmap of the dynamic TFs
-tfstoplot=list(set(mmTFs)& set(dgenes))
-dynTFs=adata.uns["cells"]
-dynTFs=dynTFs[list(dynTFs.index.isin(tfstoplot))]
-Epoch.hm_dyn(expSmoothed,dynTFs,topX=100)
+Epoch.hm_dyn(adata,limit_to = mmTFs,topX=100)
 ```
 <img src="img/heatmap.png">
 

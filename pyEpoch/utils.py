@@ -17,7 +17,7 @@ import skfda.preprocessing.smoothing.kernel_smoothers as ks
 
 
 def makeExpMat(adata):
-    expMat = pd.DataFrame(adata.X.T, index = adata.var_names, columns = adata.obs_names)
+    expMat = pd.DataFrame(adata.X.T, index = adata.var_names, columns = adata.obs_names).copy()
     return expMat
 
 
@@ -25,7 +25,7 @@ def makeExpMat(adata):
 
 
 def makeSampTab(adata):
-    sampTab = adata.obs
+    sampTab = adata.obs.copy()
     return sampTab
 
 
@@ -52,22 +52,43 @@ def gamFit(expMat,genes,celltime):
 # In[ ]:
 
 
-def grnKsmooth(adata,cells,BW=.25):
+def grnKsmooth(adata,BW=.25,pseudotime_column=None):
     #cells=ccells
     #BW=.1
     
-    
-    genes=adata.var.index
-    expDat=pd.DataFrame(adata.X).T
-    expDat.columns=adata.obs.index
-    expDat.index=genes
-    expDat=expDat.loc[expDat.sum(axis=1)!=0]
+    newadata = adata.copy()
+
+    if 'cells' in newadata.uns.keys():
+        cellids = newadata.uns['cells'].index.tolist()
+        newadata = newadata[cellids,:]
+    else:
+        cells=pd.DataFrame()
+        cells["cell_name"]=newadata.obs.index
+        cells["pseudotime"]=newadata.obs[pseudotime_column].values
+        cells.index=cells["cell_name"]
+        cells=cells.sort_values(by="pseudotime")
+        newadata.uns['cells'] = cells
+
+    if 'dgenes' in newadata.uns.keys():
+        newadata = newadata[:,newadata.uns['dgenes']]
+
+
+    expDat = makeExpMat(newadata)
+    cells = newadata.uns['cells']
+
+    # genes=adata.var.index
+    # expDat=pd.DataFrame(adata.X).T
+    # expDat.columns=adata.obs.index
+    # expDat.index=genes
+    # expDat=expDat.loc[expDat.sum(axis=1)!=0]
     
     BW=min(BW, max(cells["pseudotime"])-min(cells["pseudotime"])/10)
     t1=pd.DataFrame(cells["pseudotime"])
     t1.index=cells["cell_name"]
     t1=t1.sort_values(by='pseudotime', ascending=True)
     #expDat.iloc[t1.index]
+
+    # order expDat
     expDat=expDat[list(t1.index)]
 
     ans=pd.DataFrame(columns=np.arange(expDat.shape[1]))
@@ -85,8 +106,12 @@ def grnKsmooth(adata,cells,BW=.25):
                     each_row.append(l)
         ans=pd.concat([ans,pd.DataFrame(each_row).T])
 
-
     ans.index=expDat.index
     ans.columns=expDat.columns
-    return ans
+
+    adata.uns['smoothed_expression'] = ans
+
+    print("Done. Smoothed expression stored in .uns['smoothed_expression'].")
+
+    return adata
 

@@ -12,6 +12,7 @@ from sklearn.metrics import normalized_mutual_info_score
 import sys
 from scipy import stats
 from pygam import GAM, s,l
+from .utils import *
 
 
 
@@ -45,33 +46,47 @@ def gamFit(expMat,genes,celltime):
 # In[ ]:
 
 
-def findDynGenes(adata, group_column="leiden", pseudotime_column="dpt_pseudotime"):
+def findDynGenes(adata, pseudotime_column="dpt_pseudotime", group_column=None, path=None,pThresh=0.05):
     
-    sampTab=pd.DataFrame(adata.obs)
+    sampTab = makeSampTab(adata)
+    expDat = makeExpMat(adata)
+
+    #sampTab=pd.DataFrame(adata.obs)
     #sampTab.rename(columns={'psuedotime':'pseudotime'}, inplace=True)
     
-    genes=adata.var.index
-    expDat=pd.DataFrame(adata.X).T
-    expDat.columns=sampTab.index
-    expDat.index=genes
-    expDat=expDat.loc[expDat.sum(axis=1)!=0]
+    #genes=adata.var.index
+    #expDat=pd.DataFrame(adata.X).T
+    #expDat.columns=sampTab.index
+    #expDat.index=genes
 
-
-
-    sampTab["dpt_groups"]=sampTab[group_column]
     sampTab["pseudotime"]=sampTab[pseudotime_column]
     sampTab["cell_name"]=sampTab.index
-    path=np.unique(sampTab["dpt_groups"])
-    ids=[]
-    for grp in path:
-        a=sampTab.loc[sampTab["dpt_groups"]==grp]
-        b=a["cell_name"]
-        ids=np.append(ids,b)
-    sampTab=sampTab.loc[ids,:]
-    #print(sampTab)
-    expDat=expDat[ids]
+
+    if group_column is not None:
+        sampTab['group'] = sampTab[group_column]
+        if path is not None:
+            sampTab = sampTab.loc[sampTab['group'].isin(path)]
+    else:
+        sampTab = sampTab.assign(group='1')
+
+    # sampTab["dpt_groups"]=sampTab[group_column]
+    # sampTab["pseudotime"]=sampTab[pseudotime_column]
+    # sampTab["cell_name"]=sampTab.index
+    # path=np.unique(sampTab["dpt_groups"])
+    # ids=[]
+    # for grp in path:
+    #     a=sampTab.loc[sampTab["dpt_groups"]==grp]
+    #     b=a["cell_name"]
+    #     ids=np.append(ids,b)
+    # sampTab=sampTab.loc[ids,:]
+    # #print(sampTab)
+
+    expDat = expDat[sampTab.index]
+    expDat = expDat.loc[expDat.sum(axis=1)!=0]
+
+    #expDat=expDat[ids]
     t1=sampTab["pseudotime"]
-    t1C=t1[ids]
+    t1C=t1[sampTab.index]
     print("starting gamma...")
     #print(expDat[t1C.index])
     gpChr=pd.DataFrame(gamFit(expDat[t1C.index],expDat.index,t1))
@@ -81,13 +96,20 @@ def findDynGenes(adata, group_column="leiden", pseudotime_column="dpt_pseudotime
     cells=pd.DataFrame()
     cells["cell_name"]=pd.DataFrame(t1).index
     cells["pseudotime"]=t1.values
-    cells["group"]=sampTab["dpt_groups"].values
+    cells["group"]=sampTab["group"].values
     cells.index=cells["cell_name"]
     cells=cells.sort_values(by="pseudotime")
     #ans=list([gpChr,cells])
     adata.uns["genes"]=gpChr
     adata.uns["cells"]=cells
     print("Done. Dynamic pvalues stored in .uns['genes']. Ordered cells and pseudotime stored in .uns['cells'].")
+    
+    dgenes = gpChr.index[gpChr['dynamic_pval']<pThresh].tolist()
+    adata.uns['dgenes']=dgenes
+
+    print("Dynamic genes stored in .uns['dgenes'].")
+
+
     return adata
 
 
@@ -176,21 +198,30 @@ def clr(mim):
 # In[ ]:
 
 
-def reconstructGRN(adata,tfs,pThresh=0.05,zThresh=0,method="pearson"):
+def reconstructGRN(adata,tfs,zThresh=0,method="pearson"):
+    
+    expDat = makeExpMat(adata)
+    dgenes = adata.uns['dgenes']
+    cells = adata.uns['cells'].index.tolist()
+
     # limit adata to dynamic genes
-    DataFrameGenes=pd.DataFrame(adata.uns["genes"]["dynamic_pval"]<pThresh)
-    dgenes=DataFrameGenes[DataFrameGenes["dynamic_pval"]==True].index.values
-    adata = adata[:,dgenes]
+    # DataFrameGenes=pd.DataFrame(adata.uns["genes"]["dynamic_pval"]<pThresh)
+    # dgenes=DataFrameGenes[DataFrameGenes["dynamic_pval"]==True].index.values
+    # adata = adata[:,dgenes]
+
+    expDat = expDat[cells]
+    expDat = expDat.loc[dgenes]
+    expDat = expDat.loc[expDat.sum(axis=1)!=0]
 
     # reconstruct
-    genes=adata.var.index
-    expDat=pd.DataFrame(adata.X).T
-    expDat.columns=adata.obs.index
-    expDat.index=genes
-    exp=expDat.loc[expDat.sum(axis=1)!=0]
+    # genes=adata.var.index
+    # expDat=pd.DataFrame(adata.X).T
+    # expDat.columns=adata.obs.index
+    # expDat.index=genes
+    # exp=expDat.loc[expDat.sum(axis=1)!=0]
     
-    texp=exp.T
-    mim=build_mim(exp,method)
+    texp=expDat.T
+    mim=build_mim(expDat,method)
     xnet=clr(mim)
     xcorr=texp.corr()
     tfsI= list(set(tfs) & set(texp.columns))
@@ -199,6 +230,7 @@ def reconstructGRN(adata,tfs,pThresh=0.05,zThresh=0,method="pearson"):
     xcorr=xcorr.loc[tfsI]
     grn=cn_extractRegsDF(xnet,xcorr,zThresh)
     grn = grn[grn['zscore']>zThresh]
+    
     adata.uns["grnDF"]=grn
     print("Done. Static GRN stored in .uns['grnDF']")
     return adata

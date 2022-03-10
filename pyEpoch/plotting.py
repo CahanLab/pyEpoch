@@ -12,6 +12,8 @@ import matplotlib.pyplot as plt
 import sys
 import seaborn as sns
 from matplotlib.lines import Line2D
+from .utils import *
+
 
 
 # In[ ]:
@@ -377,7 +379,7 @@ def plot_targets_with_top_regulators(grn,targets,weight_column="zscore",gene_ran
 # In[ ]:
 
 
-def hm_dyn(expDat,dynRes,topX=25,cRow=False,cCol=False,limits=[0,10],toScale=False,fontsize_row=4,geneAnn=False):
+def hm_dyn(adata,limit_to=None,smooth=True,topX=25,cRow=False,cCol=False,limits=[0,10],toScale=False,fontsize_row=4,geneAnn=False):
     #expDat=expSmoothed
     #dynRes=dynTFs
     #topX=25
@@ -389,9 +391,28 @@ def hm_dyn(expDat,dynRes,topX=25,cRow=False,cCol=False,limits=[0,10],toScale=Fal
     #geneAnn=False
 
     #topX=100
+
+    # Like in R version, need to run FindDynGenes first
+
+    if smooth:
+        if 'smoothed_expression' in adata.uns.keys():
+            expDat = adata.uns['smoothed_expression'].copy()
+        else:
+            newadata = grnKsmooth(adata)
+            expDat = newadata.uns['smoothed_expression'].copy()
+    else:
+        expDat = makeExpMat(adata)
+
+    sampTab = adata.uns['cells'].copy()
+    genes = adata.uns['genes'].copy()
+
+    if limit_to is not none:
+        keepgenes = [x for x in genes.index.tolist() if x in limit_to]
+        genes = genes.loc[keepgenes]
+
     allgenes=expDat.index
 
-    sampTab=dynRes[1]
+    #sampTab=dynRes[1]
     t1=pd.DataFrame(sampTab["pseudotime"])
     t1.index=sampTab["cell_name"]
     grps=pd.DataFrame(sampTab["group"])
@@ -402,8 +423,8 @@ def hm_dyn(expDat,dynRes,topX=25,cRow=False,cCol=False,limits=[0,10],toScale=Fal
     expDat=expDat[ord1.index]
     grps=grps.loc[ord1.index]
 
-    genes=dynRes[0]
-    genes=list(genes.sort_values(by="expression",ascending=True).iloc[0:topX].index)
+    #genes=dynRes[0]
+    genes=list(genes.sort_values(by="dynamic_pval",ascending=True).iloc[0:topX].index)
 
 
     missingGenes=set(genes).difference(set(allgenes))
