@@ -40,7 +40,7 @@ sc.pp.log1p(adata)
 sc.pp.scale(adata, max_value=10)
 
 mmTFs=pd.read_csv("mmTFs_epoch.csv")
-mmTFs=list(mmTFs["mmTFs"].values)
+# mmTFs=list(mmTFs["mmTFs"].values)
 ```
 ### Static Network Reconstruction
 Reconstruction occurs in three steps: 
@@ -160,7 +160,7 @@ adata.obs_names=adata.obs['obs_names']
 adata.X = adata.X.todense()
 
 mmTFs=pd.read_csv("mmTFs_epoch.csv")
-mmTFs=list(mmTFs["mmTFs"].values)
+# mmTFs=list(mmTFs["mmTFs"].values)
 ```
 ### Static Network Reconstruction
 Reconstruction occurs in three steps: 
