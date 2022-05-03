@@ -35,7 +35,8 @@ sc.logging.print_header()
 sc.settings.set_figure_params(dpi=80, facecolor='white')
 adata=sc.read_loom("adMuscle_E12_DPT_071919.loom",sparse=False) #adata matrix cannot be sparse
 
-sc.pp.normalize_total(adata, target_sum=1e4)
+#sc.pp.normalize_total(adata, target_sum=1e4)
+sc.pp.normalize_per_cell(adata)
 sc.pp.log1p(adata)
 sc.pp.scale(adata, max_value=10)
 
