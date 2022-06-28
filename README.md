@@ -34,14 +34,16 @@ sc.settings.verbosity = 3             # verbosity: errors (0), warnings (1), inf
 sc.logging.print_header()
 sc.settings.set_figure_params(dpi=80, facecolor='white')
 adata=sc.read_loom("adMuscle_E12_DPT_071919.loom",sparse=False) #adata matrix cannot be sparse
+adata.var_names=adata.var['var_names']
+adata.obs_names=adata.obs['obs_names']
 
 #sc.pp.normalize_total(adata, target_sum=1e4)
-sc.pp.normalize_per_cell(adata)
+sc.pp.normalize_per_cell(adata, counts_per_cell_after=1e4)
 sc.pp.log1p(adata)
 sc.pp.scale(adata, max_value=10)
 
-mmTFs=pd.read_csv("mmTFs_epoch.csv")
-# mmTFs=list(mmTFs["mmTFs"].values)
+mmTFs=pd.read_csv("mmTFs_epoch.csv", header = None)
+mmTFs=list(mmTFs[0].values)
 ```
 ### Static Network Reconstruction
 Reconstruction occurs in three steps: 
@@ -158,10 +160,10 @@ import pyEpoch as Epoch
 adata=sc.read_loom("sampled_mesoderm_WAG.loom",sparse=False) #adata matrix cannot be sparse
 adata.var_names=adata.var['var_names']
 adata.obs_names=adata.obs['obs_names']
-adata.X = adata.X.todense()
+# adata.X = adata.X.todense()
 
-mmTFs=pd.read_csv("mmTFs_epoch.csv")
-# mmTFs=list(mmTFs["mmTFs"].values)
+mmTFs=pd.read_csv("mmTFs_epoch.csv", header = None)
+mmTFs=list(mmTFs[0].values)
 ```
 ### Static Network Reconstruction
 Reconstruction occurs in three steps: 
@@ -174,7 +176,7 @@ Reconstruction occurs in three steps:
 adata=Epoch.findDynGenes(adata, group_column="cluster",pseudotime_column="latent_time")
 
 # Reconstruct and perform optional crossweighting
-adata=Epoch.reconstructGRN(adata,mmTFs,pThresh=0.05,zThresh=3)
+adata=Epoch.reconstructGRN(adata,mmTFs,zThresh=3)
 adata=Epoch.crossweight(adata)
 ```
 The reconstructed network is stored in adata.uns['grnDF']. TG and TF refer to target gene and transcription factor respectively. The column "zscore" is the network prior to crossweighting. The column "weighted_score" is the network after crossweighting:
