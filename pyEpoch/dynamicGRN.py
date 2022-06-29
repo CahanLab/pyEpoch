@@ -499,6 +499,54 @@ def compute_pagerank(adata,weight_column="weighted_score",directed_graph=False):
         #pagerank
         pagerank["is_regulator"]=list(pd.Series(pagerank["gene"]).isin(np.unique(df["TF"])))
         ranks[i]=pagerank
-    adata.uns["gene_rank"]=ranks
+    adata.uns["pagerank"]=ranks
+    return adata
+
+
+def compute_betweenness_degree(adata,weight_column="weighted_score",directed_graph=False):
+
+    dynnet = adata.uns['dynamic_GRN'].copy()
+    
+    keys=list(dynnet.keys())
+    ranks={}
+    for i in keys:
+        ranks[i]=None
+    for i in list(dynnet.keys()):
+        df=dynnet[i]
+        df=df[["TF","TG",weight_column]]
+        df.columns=["TF","TG","weight"]
+        df.index=np.arange(df.shape[0])
+        pagerank_genes=[]
+        
+        for j in np.arange(df.shape[0]):
+            a=df.iloc[j]
+            pagerank_genes.append(a[0])
+            pagerank_genes.append(a[1])
+        indexes=np.unique(pagerank_genes, return_index=True)[1]
+        pagerank_genes=[pagerank_genes[index]for index in sorted(indexes)]  
+        pagerank_genes
+        tuples = [tuple(x) for x in df.values]
+        Gm = igraph.Graph.TupleList(tuples, directed = False, edge_attrs = ['weight'])
+        betweenness_degree=pd.DataFrame()
+
+        betweenness_degree["betweenness"]=Gm.betweenness(directed=False,weights=list(df["weight"]))
+        n=Gm.vcount()
+        #Bnorm=2*B/(n*n-3*n+2)
+        betweenness_degree["betweenness"]=2*betweenness_degree/(n*n-3*n+2)
+    
+        betweenness_degree["degree"]=Gm.degree(mode='all',loops='true')
+        betweenness_degree["degree"]=betweenness_degree["degree"]/(n-1)
+    
+        betweenness_degree["betweenness*degree"]=betweenness_degree["betweenness"]*betweenness_degree["degree"]
+        betweenness_degree.index=pagerank_genes
+        betweenness_degree["gene"]=betweenness_degree.index
+        betweenness_degree=betweenness_degree[["gene","betweenness","degree","betweenness*degree"]]
+    
+        betweenness_degree=betweenness_degree.sort_values(by='betweenness*degree', ascending=False)
+    
+        betweenness_degree["is_regulator"]=list(pd.Series(betweenness_degree["gene"]).isin(np.unique(df["TF"])))
+        ranks[i]=betweenness_degree
+        
+    adata.uns["betweenness_degree"]=ranks    
     return adata
 
