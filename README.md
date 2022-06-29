@@ -252,12 +252,12 @@ adata.uns["another_gene_rank"] now contains a list of rankings for each epoch an
 
 ```Python
 print(adata.uns["another_gene_rank"]["epoch1..epoch2"].iloc[0:5,:])
-          gene  betweenness    degree  betweenness*degree  is_regulator
-Utf1      Utf1     0.268425  0.484444            0.130037          True
-Zfp42    Zfp42     0.170674  0.487407            0.083188          True
-Klf2      Klf2     0.156712  0.514074            0.080561          True
-Sox2      Sox2     0.186447  0.416296            0.077617          True
-Arid5b  Arid5b     0.053685  0.275556            0.014793          True
+#           gene  betweenness    degree  betweenness*degree  is_regulator
+# Utf1      Utf1     0.268425  0.484444            0.130037          True
+# Zfp42    Zfp42     0.170674  0.487407            0.083188          True
+# Klf2      Klf2     0.156712  0.514074            0.080561          True
+# Sox2      Sox2     0.186447  0.416296            0.077617          True
+# Arid5b  Arid5b     0.053685  0.275556            0.014793          True
 ```
 
 ### Plotting
