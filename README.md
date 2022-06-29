@@ -175,10 +175,19 @@ import pyEpoch as Epoch
 ### Load Data
 
 ```Python
+sc.settings.verbosity = 3             # verbosity: errors (0), warnings (1), info (2), hints (3)
+sc.logging.print_header()
+sc.settings.set_figure_params(dpi=80, facecolor='white')
+```
+```Python
 adata=sc.read_loom("sampled_mesoderm_WAG.loom",sparse=False) #adata matrix cannot be sparse
 adata.var_names=adata.var['var_names']
 adata.obs_names=adata.obs['obs_names']
 # adata.X = adata.X.todense()
+
+sc.pp.normalize_per_cell(adata, counts_per_cell_after=1e4)
+sc.pp.log1p(adata)
+sc.pp.scale(adata, max_value=10)
 
 mmTFs=pd.read_csv("mmTFs_epoch.csv", header = None)
 mmTFs=list(mmTFs[0].values)
@@ -226,9 +235,50 @@ adata.uns['gene_rank'] now contains a list of rankings for each epoch and transi
 
 ```Python
 print(adata.uns["gene_rank"]["epoch1..epoch2"].iloc[0:5,:])
-
+#           gene  page_rank  is_regulator
+# Utf1      Utf1   0.065106          True
+# Zfp42    Zfp42   0.056393          True
+# Klf2      Klf2   0.055411          True
+# Sox2      Sox2   0.040435          True
+# Arid5b  Arid5b   0.027446          True
 
 ```
+
+We can also use betweenness and degree.
+```Python
+adata=Epoch.compute_betweenness_degree(adata,weight_column="zscore")
+```
+adata.uns["another_gene_rank"] now contains a list of rankings for each epoch and transition network:
+
+```Python
+print(adata.uns["another_gene_rank"]["epoch1..epoch2"].iloc[0:5,:])
+          gene  betweenness    degree  betweenness*degree  is_regulator
+Utf1      Utf1     0.268425  0.484444            0.130037          True
+Zfp42    Zfp42     0.170674  0.487407            0.083188          True
+Klf2      Klf2     0.156712  0.514074            0.080561          True
+Sox2      Sox2     0.186447  0.416296            0.077617          True
+Arid5b  Arid5b     0.053685  0.275556            0.014793          True
+```
+
+### Plotting
+Epoch contains various plotting tools to visualize dynamic activity of genes and networks.
+
+
+#### We can visualize dynamically expressed genes across time
+This is particularly useful for verifying epoch assignments, and gauging how many epochs should occur in a trajectory
+```Python
+# First, smooth expression for a cleaner plot
+adata=Epoch.grnKsmooth(adata,BW=.1)
+
+# Plot a heatmap of the dynamic TFs
+Epoch.hm_dyn(adata,limit_to = mmTFs,topX=100)
+```
+
+
+```Python
+Epoch.plot_dynamic_network(adata.uns["dynamic_GRN"],mmTFs,only_TFs=True,order=["epoch1..epoch1","epoch1..epoch2","epoch2..epoch2"])
+```
+
 
 
 
