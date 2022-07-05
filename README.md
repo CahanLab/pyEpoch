@@ -152,7 +152,7 @@ Epoch.hm_dyn(adata,limit_to = mmTFs,topX=100)
 <img src="img/heatmap.png">
 
 ```Python
-Epoch.plot_dynamic_network(adata.uns["dynamic_GRN"],mmTFs,only_TFs=True,order=["epoch1..epoch1","epoch1..epoch2","epoch2..epoch2"])
+Epoch.plot_dynamic_network(adata,mmTFs,only_TFs=True,order=["epoch1..epoch1","epoch1..epoch2","epoch2..epoch2"])
 ```
 
 <img src="img/dynamic_network: epoch1..epoch1.png">
@@ -276,7 +276,7 @@ Epoch.hm_dyn(adata,limit_to = mmTFs,topX=100)
 
 
 ```Python
-Epoch.plot_dynamic_network(adata.uns["dynamic_GRN"],mmTFs,only_TFs=True,order=["epoch1..epoch1","epoch1..epoch2","epoch2..epoch2"])
+Epoch.plot_dynamic_network(adata,mmTFs,only_TFs=True,order=["epoch1..epoch1","epoch1..epoch2","epoch2..epoch2"])
 ```
 
 
