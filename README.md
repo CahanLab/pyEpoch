@@ -273,13 +273,15 @@ adata=Epoch.grnKsmooth(adata,BW=.1)
 # Plot a heatmap of the dynamic TFs
 Epoch.hm_dyn(adata,limit_to = mmTFs,topX=100)
 ```
-
+<img src="img/ex1_heatmap.png">
 
 ```Python
 Epoch.plot_dynamic_network(adata,mmTFs,only_TFs=True,order=["epoch1..epoch1","epoch1..epoch2","epoch2..epoch2"])
 ```
 
-
+<img src="img/ex1_dynamic_network_epoch1..epoch1.png">
+<img src="img/ex1_dynamic_network_epoch1..epoch2.png">
+<img src="img/ex1_dynamic_network_epoch2..epoch2.png">
 
 
 
