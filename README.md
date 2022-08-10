@@ -231,10 +231,10 @@ The dynamic network across epochs is stored in adata.uns['dynamic_grn'].
 ```Python
 adata=Epoch.compute_pagerank(adata,weight_column="weighted_score")
 ```
-adata.uns['gene_rank'] now contains a list of rankings for each epoch and transition network.
+adata.uns['pagerank'] now contains a list of rankings for each epoch and transition network.
 
 ```Python
-print(adata.uns["gene_rank"]["epoch1..epoch2"].iloc[0:5,:])
+print(adata.uns["pagerank"]["epoch1..epoch2"].iloc[0:5,:])
 #           gene  page_rank  is_regulator
 # Utf1      Utf1   0.065106          True
 # Zfp42    Zfp42   0.056393          True
@@ -248,10 +248,10 @@ We can also use betweenness and degree.
 ```Python
 adata=Epoch.compute_betweenness_degree(adata,weight_column="zscore")
 ```
-adata.uns["another_gene_rank"] now contains a list of rankings for each epoch and transition network:
+adata.uns["betweenness_degree"] now contains a list of rankings for each epoch and transition network:
 
 ```Python
-print(adata.uns["another_gene_rank"]["epoch1..epoch2"].iloc[0:5,:])
+print(adata.uns["betweenness_degree"]["epoch1..epoch2"].iloc[0:5,:])
 #           gene  betweenness    degree  betweenness*degree  is_regulator
 # Utf1      Utf1     0.268425  0.484444            0.130037          True
 # Zfp42    Zfp42     0.170674  0.487407            0.083188          True
