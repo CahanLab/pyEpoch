@@ -107,10 +107,10 @@ We can use Epoch to identify the most influential regulators in the reconstructe
 ```Python
 adata=Epoch.compute_pagerank(adata,weight_column="weighted_score")
 ```
-adata.uns['gene_rank'] now contains a list of rankings for each epoch and transition network:
+adata.uns['pagerank'] now contains a list of rankings for each epoch and transition network:
 
 ```Python
-print(adata.uns["gene_rank"]["epoch1..epoch2"].iloc[0:5,:])
+print(adata.uns["pagerank"]["epoch1..epoch2"].iloc[0:5,:])
 #        gene  page_rank  is_regulator
 #Npm1    Npm1   0.062243          True
 #Pcna    Pcna   0.061330          True
@@ -123,10 +123,10 @@ We can also use betweenness and degree.
 ```Python
 adata=Epoch.compute_betweenness_degree(adata,weight_column="zscore")
 ```
-adata.uns["another_gene_rank"] now contains a list of rankings for each epoch and transition network:
+adata.uns["betweenness_degree"] now contains a list of rankings for each epoch and transition network:
 
 ```Python
-print(adata.uns["another_gene_rank"]["epoch1..epoch2"].iloc[0:5,:])
+print(adata.uns["betweenness_degree"]["epoch1..epoch2"].iloc[0:5,:])
 #       gene  betweenness    degree  betweenness*degree  is_regulator
 # Npm1  Npm1     0.406670  0.351351            0.142884          True
 # Ybx1  Ybx1     0.178786  0.189189            0.033824          True
