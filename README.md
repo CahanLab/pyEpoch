@@ -285,3 +285,105 @@ Epoch.plot_dynamic_network(adata,mmTFs,only_TFs=True,order=["epoch1..epoch1","ep
 
 
 
+## Example Walk Thru 2: Network Comparison <a name="example2"></a>
+We can use PyEpoch to compare networks. Here's an example of doing so at the edge level. In this instance we use PyEpoch to extract "differential networks".
+
+Starting with the network we reconstructed in Example 0, we can compare it to the network reconstructed in Example 1. Alternatively, such a method may be used to compare in vitro networks with in vivo networks.
+
+### Data
+In this section, PyEpoch requires at least two reconstructed networks (in order to carry out the comparison) and the epoch assignments for these networks. These inputs are derived from the reconstruction in previous sections.
+
+We need to make sure that during reconstruction, the two networks have the same number of epochs. We also need to use different adata names for the two reconstructions.
+```Python
+# In Example 0
+adata=Epoch.define_epochs(adata,method="pseudotime",num_epochs=3)
+
+# In Example 1
+adata1 = Epoch.define_epochs(adata,method="pseudotime",num_epochs=3)
+```
+## Compute the differential network
+We can compute the differential network between network1 (GRN reconstructed in Example 0) and network2 (GRN reconstructed in Example 1).
+
+```Python
+# Run edge_uniqueness to tally differences in edges
+res = Epoch.edge_uniqueness([adata.uns["grnDF"],adata1.uns["grnDF"]],mmTFs,weight_column="weighted_score")
+
+# Run dynamic_difference_network to extract the dynamic differential network
+network1_on = Epoch.dynamic_difference_network(res, adata, adata1, "network1", types="on", diff_thresh=7.5, condition_thresh=10)
+
+# Add interaction type
+network1_on = Epoch.add_interactions_types(network1_on,"on",adata.uns["grnDF"],[adata1.uns["grnDF"]])
+```
+
+
+
+
+
+
+## Example 3: Signaling Pathway Integration <a name="example3"></a>
+We can use PyEpoch to integrate signaling activity and trace paths through the network. Starting with the dynamic network we constructed in Example 1.
+
+## Data
+In this section, PyEpoch requires a reconstructed network (which can be derived from Example 1: Reconstruction. As described below, PyEpoch will also require pre-computed effector targets.
+
+After reconstruction:
+
+```Python
+expMat = Epoch.makeExpMat(adata)
+sampTab = Epoch.makeSampTab(adata)
+
+dynamic_grn = adata.uns['dynamic_GRN']
+```
+## Get effector targets
+Effector targets of major signaling pathways are pre-computed and available within PyEpoch (mouse: see 'data/effectortargets_mouse.rda'). These lists were computed by: (1) aquiring binding score (MACS2) data for 18 signaling effector TFs from the ChIP-Atlas (Oki et al., 2018), (2) target genes were ranked by maximum binding score, (3) the top 2000 targets were retained (or all retained, if less than 2000 targets).
+
+Alternatively, here's how we can derive new effector target lists:
+```Python
+effectors = Epoch.load_SP_effectors(path="Data/mouse_signaling_binding")
+effectors = Epoch.score_targets(effectors)
+effectortargets = Epoch.find_targets(effectors,column="max_score",by_rank= True, n_targets=2000)
+
+# Instead of "max_score", we could have also ranked by "mean_score" or "percent_freq".
+# Instead of retaining the top n_targets, we could have also specified a cutoff threshold by specifying the 'threshold' parameter.
+```
+
+## Signaling pathway activity
+We can estimate signaling activity over time by quantifying the expression of effector targets. As an example, let's look at Wnt signaling. Unsurprisingly, we see strong activity as cells progress toward mesodermal fate.
+
+Alternatively, we could instead look at all pathways to understand differences in major signaling pathways between treatments, conditions, etc. (See manuscript for details)
+
+```Python
+# Wnt signaling
+wnt_targets = {k: effectortargets[k] for k in ("WNT_Ctnnb1.1","WNT_Lef1.1","WNT_Tcf7.1","WNT_Tcf7l2.1")}
+
+# lets separate by pre-treatment and treatment
+# adding in the treatment information
+ccells = adata.uns['cells']
+ccells.set_index(ccells['cell_name'])
+ccells = ccells.reindex(index = sampTab['obs_names'])
+ccells.set_index(ccells['cell_name'])
+ccells['treatment'] = sampTab['treatment']
+adata.uns['cells'] = ccells
+
+# compute mean module expression over time
+adata = Epoch.mean_module_expression(adata,wnt_targets, "pre", "pre_exp")
+adata = Epoch.mean_module_expression(adata,wnt_targets, "WAG", "WAG_exp")
+
+#Add plotting
+```
+## Paths toward target genetic programs
+Now that we have reconstructed a dynamic network and predicted effector target genes, we can integrate signaling pathway activity with the GRN. For example, we can trace the effects of Wnt signaling in activating a mesoderm-like program (or simply, some genes of interest).
+
+```Python
+# Some interesting mesoderm TFs, plus Sox17 (an endoderm TF)
+interesting_genes = ["Mesp1","Foxc1","Foxc2","Tbx6","Sox17"]
+
+# Paths from b-catenin to interesting genes
+bcat_to_meso = dynamic_shortest_path_multiple(adata,effectortargets['WNT_Ctnnb1.1'],interesting_genes)
+
+# Paths from Tcf7 to interesting genes
+tcf7_to_meso = dynamic_shortest_path_multiple(adata,effectortargets['WNT_Tcf7.1'],interesting_genes)
+
+# Paths from Tcf7l2 to interesting genes
+tcf7l2_to_meso = dynamic_shortest_path_multiple(adata,effectortargets['WNT_Tcf7l2.1'],interesting_genes)
+```
