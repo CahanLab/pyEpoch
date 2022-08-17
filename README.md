@@ -301,7 +301,7 @@ adata=Epoch.define_epochs(adata,method="pseudotime",num_epochs=3)
 # In Example 1
 adata1 = Epoch.define_epochs(adata,method="pseudotime",num_epochs=3)
 ```
-## Compute the differential network
+### Compute the differential network
 We can compute the differential network between network1 (GRN reconstructed in Example 0) and network2 (GRN reconstructed in Example 1).
 
 ```Python
@@ -323,7 +323,7 @@ network1_on = Epoch.add_interactions_types(network1_on,"on",adata.uns["grnDF"],[
 ## Example 3: Signaling Pathway Integration <a name="example3"></a>
 We can use PyEpoch to integrate signaling activity and trace paths through the network. Starting with the dynamic network we constructed in Example 1.
 
-## Data
+### Data
 In this section, PyEpoch requires a reconstructed network (which can be derived from Example 1: Reconstruction. As described below, PyEpoch will also require pre-computed effector targets.
 
 After reconstruction:
@@ -334,7 +334,7 @@ sampTab = Epoch.makeSampTab(adata)
 
 dynamic_grn = adata.uns['dynamic_GRN']
 ```
-## Get effector targets
+### Get effector targets
 Effector targets of major signaling pathways are pre-computed and available within PyEpoch (mouse: see 'data/effectortargets_mouse.rda'). These lists were computed by: (1) aquiring binding score (MACS2) data for 18 signaling effector TFs from the ChIP-Atlas (Oki et al., 2018), (2) target genes were ranked by maximum binding score, (3) the top 2000 targets were retained (or all retained, if less than 2000 targets).
 
 Alternatively, here's how we can derive new effector target lists:
@@ -347,7 +347,7 @@ effectortargets = Epoch.find_targets(effectors,column="max_score",by_rank= True,
 # Instead of retaining the top n_targets, we could have also specified a cutoff threshold by specifying the 'threshold' parameter.
 ```
 
-## Signaling pathway activity
+### Signaling pathway activity
 We can estimate signaling activity over time by quantifying the expression of effector targets. As an example, let's look at Wnt signaling. Unsurprisingly, we see strong activity as cells progress toward mesodermal fate.
 
 Alternatively, we could instead look at all pathways to understand differences in major signaling pathways between treatments, conditions, etc. (See manuscript for details)
@@ -371,7 +371,7 @@ adata = Epoch.mean_module_expression(adata,wnt_targets, "WAG", "WAG_exp")
 
 #Add plotting
 ```
-## Paths toward target genetic programs
+### Paths toward target genetic programs
 Now that we have reconstructed a dynamic network and predicted effector target genes, we can integrate signaling pathway activity with the GRN. For example, we can trace the effects of Wnt signaling in activating a mesoderm-like program (or simply, some genes of interest).
 
 ```Python
