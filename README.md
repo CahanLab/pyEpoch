@@ -288,32 +288,67 @@ Epoch.plot_dynamic_network(adata,mmTFs,only_TFs=True,order=["epoch1..epoch1","ep
 ## Example Walk Thru 2: Network Comparison <a name="example2"></a>
 We can use PyEpoch to compare networks. Here's an example of doing so at the edge level. In this instance we use PyEpoch to extract "differential networks".
 
-Starting with the network we reconstructed in Example 0, we can compare it to the network reconstructed in Example 1. Alternatively, such a method may be used to compare in vitro networks with in vivo networks.
+Starting with the network we reconstructed in Example 0, we can compare it to a network reconstructed using data collected from mESC directed differentiation toward mesoderm guided by a separate treatment. Alternatively, such a method may be used to compare in vitro networks with in vivo networks.
 
 ### Data
 In this section, PyEpoch requires at least two reconstructed networks (in order to carry out the comparison) and the epoch assignments for these networks. These inputs are derived from the reconstruction in previous sections.
 
-We need to make sure that during reconstruction, the two networks have the same number of epochs. We also need to use different adata names for the two reconstructions.
+First, load in the data. The reconstructed network and epoch assignments from the previous section are provided here as 'net1' and epochs1':
 ```Python
-# In Example 0
-adata=Epoch.define_epochs(adata,method="pseudotime",num_epochs=3)
+# example 1 epochs
+ex1Ep1=pd.read_csv("example1_epoch1.csv", index_col = 0, header = None)
+ex1Ep1 = list(ex1Ep1[1].values)
+ex1Ep2=pd.read_csv("example1_epoch2.csv", index_col = 0, header = None)
+ex1Ep2 = list(ex1Ep2[1].values)
+ex1Ep3=pd.read_csv("example1_epoch3.csv", index_col = 0, header = None)
+ex1Ep3 = list(ex1Ep3[1].values)
 
-# In Example 1
-adata1 = Epoch.define_epochs(adata,method="pseudotime",num_epochs=3)
+#TFs
+tfs = pd.read_csv('mmTFs', header = None)
+tfs=list(tfs[1].values)
+
+#example 2 epochs
+ex2Ep1=pd.read_csv("example2_epoch1.csv", index_col = 0, header = None)
+ex2Ep1 = list(ex2Ep1[1].values)
+ex2Ep2=pd.read_csv("example2_epoch2.csv", index_col = 0, header = None)
+ex2Ep2 = list(ex2Ep2[1].values)
+ex2Ep3=pd.read_csv("example2_epoch3.csv", index_col = 0, header = None)
+ex2Ep3 = list(ex2Ep3[1].values)
+
+#combine into dictionaries
+epochs1Dic = {ex1Ep1[0]: ex1Ep1[1:], ex1Ep2[0]: ex1Ep2[1:], ex1Ep3[0] : ex1Ep3[1:]}
+epochs2Dic = {ex2Ep1[0]: ex2Ep1[1:], ex2Ep2[0]: ex2Ep2[1:], ex2Ep3[0] : ex2Ep3[1:]}
+
+#Put them into Anndata structure
+adata2 = sc.AnnData()
+adata2.uns["epochs"] = epochs1Dic
+adata3 = sc.AnnData()
+adata3.uns["epochs"] = epochs2Dic
+
+# example 1 and example 2 networks
+net1 = pd.read_csv("example1_net1.csv", index_col = 0)
+net2 = pd.read_csv("example2_net2.csv", index_col = 0)
 ```
+
 ### Compute the differential network
-We can compute the differential network between network1 (GRN reconstructed in Example 0) and network2 (GRN reconstructed in Example 1).
+We can compute the differential network between network1 (GRN reconstructed in Example 1) and network2 (GRN just loaded in).
 
 ```Python
 # Run edge_uniqueness to tally differences in edges
-res = Epoch.edge_uniqueness([adata.uns["grnDF"],adata1.uns["grnDF"]],mmTFs,weight_column="weighted_score")
+res = Epoch.edge_uniqueness([net1,net2],mmTFs,weight_column="weighted_score")
 
 # Run dynamic_difference_network to extract the dynamic differential network
-network1_on = Epoch.dynamic_difference_network(res, adata, adata1, "network1", types="on", diff_thresh=7.5, condition_thresh=10)
+network1_on = Epoch.dynamic_difference_network(res, adata2, adata3, "network1", types="on", diff_thresh=7.5, condition_thresh=10)
 
 # Add interaction type
-network1_on = Epoch.add_interactions_types(network1_on,"on",adata.uns["grnDF"],[adata1.uns["grnDF"]])
+network1_on = Epoch.add_interactions_types(network1_on,"on",net1,[net2])
 ```
+The edges in the resulting differential network are those that are differentially active in network 1. We can tune the threshold "diff_thresh" to increase or decrease the difference threshold at which an edge is considered differentially active. We can tune the threshold "condition_thresh" to change the threshold at which an edge is considered active in a given network.
+
+The weight_column parameter in edge_uniquness can be changed to reflect the proper edge weight. For example, other metrics of importance can be used in place of the crossweighted score, such as degree product.
+
+This is what the differential network looks like:
+
 
 
 
