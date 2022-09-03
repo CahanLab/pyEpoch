@@ -295,39 +295,9 @@ In this section, PyEpoch requires at least two reconstructed networks (in order 
 
 First, load in the data. The reconstructed network and epoch assignments from the previous section are provided here as 'net1' and epochs1':
 ```Python
-# example 1 epochs
-ex1Ep1=pd.read_csv("example1_epoch1.csv", index_col = 0, header = None)
-ex1Ep1 = list(ex1Ep1[1].values)
-ex1Ep2=pd.read_csv("example1_epoch2.csv", index_col = 0, header = None)
-ex1Ep2 = list(ex1Ep2[1].values)
-ex1Ep3=pd.read_csv("example1_epoch3.csv", index_col = 0, header = None)
-ex1Ep3 = list(ex1Ep3[1].values)
-
-#TFs
-tfs = pd.read_csv('mmTFs', header = None)
-tfs=list(tfs[1].values)
-
-#example 2 epochs
-ex2Ep1=pd.read_csv("example2_epoch1.csv", index_col = 0, header = None)
-ex2Ep1 = list(ex2Ep1[1].values)
-ex2Ep2=pd.read_csv("example2_epoch2.csv", index_col = 0, header = None)
-ex2Ep2 = list(ex2Ep2[1].values)
-ex2Ep3=pd.read_csv("example2_epoch3.csv", index_col = 0, header = None)
-ex2Ep3 = list(ex2Ep3[1].values)
-
-#combine into dictionaries
-epochs1Dic = {ex1Ep1[0]: ex1Ep1[1:], ex1Ep2[0]: ex1Ep2[1:], ex1Ep3[0] : ex1Ep3[1:]}
-epochs2Dic = {ex2Ep1[0]: ex2Ep1[1:], ex2Ep2[0]: ex2Ep2[1:], ex2Ep3[0] : ex2Ep3[1:]}
-
-#Put them into Anndata structure
-adata2 = sc.AnnData()
-adata2.uns["epochs"] = epochs1Dic
-adata3 = sc.AnnData()
-adata3.uns["epochs"] = epochs2Dic
-
-# example 1 and example 2 networks
-net1 = pd.read_csv("example1_net1.csv", index_col = 0)
-net2 = pd.read_csv("example2_net2.csv", index_col = 0)
+# load in two anndata instances
+adata2=sc.read_h5ad("example1_anndata.h5ad")
+adata3=sc.read_h5ad("example2_anndata.h5ad")
 ```
 
 ### Compute the differential network
@@ -335,13 +305,13 @@ We can compute the differential network between network1 (GRN reconstructed in E
 
 ```Python
 # Run edge_uniqueness to tally differences in edges
-res = Epoch.edge_uniqueness([net1,net2],mmTFs,weight_column="weighted_score")
+res = Epoch.edge_uniqueness([adata2.uns['dynamic_GRN'],adata3.uns['dynamic_GRN']],mmTFs,weight_column="weighted_score")
 
 # Run dynamic_difference_network to extract the dynamic differential network
 network1_on = Epoch.dynamic_difference_network(res, adata2, adata3, "network1", types="on", diff_thresh=7.5, condition_thresh=10)
 
 # Add interaction type
-network1_on = Epoch.add_interactions_types(network1_on,"on",net1,[net2])
+network1_on = Epoch.add_interactions_types(network1_on,"on",adata2.uns['dynamic_GRN'],[adata3.uns['dynamic_GRN']])
 ```
 The edges in the resulting differential network are those that are differentially active in network 1. We can tune the threshold "diff_thresh" to increase or decrease the difference threshold at which an edge is considered differentially active. We can tune the threshold "condition_thresh" to change the threshold at which an edge is considered active in a given network.
 
