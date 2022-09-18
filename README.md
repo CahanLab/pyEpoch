@@ -32,7 +32,7 @@ import pyEpoch as Epoch
 ```Python
 sc.settings.verbosity = 3             # verbosity: errors (0), warnings (1), info (2), hints (3)
 sc.logging.print_header()
-sc.settings.set_figure_params(dpi=80, facecolor='white')
+Epoch.set_figure_params(dpi=100, figsize = (8,6), facecolor='white')
 adata=sc.read_loom("adMuscle_E12_DPT_071919.loom",sparse=False) #adata matrix cannot be sparse
 adata.var_names=adata.var['var_names']
 adata.obs_names=adata.obs['obs_names']
@@ -152,7 +152,7 @@ Epoch.hm_dyn(adata,limit_to = mmTFs,topX=100)
 <img src="img/heatmap.png">
 
 ```Python
-Epoch.plot_dynamic_network(adata,mmTFs,only_TFs=True,order=["epoch1..epoch1","epoch1..epoch2","epoch2..epoch2"])
+Epoch.plot_dynamic_network(adata,only_TFs=True,order=["epoch1..epoch1","epoch1..epoch2","epoch2..epoch2"])
 ```
 
 <img src="img/dynamic_network: epoch1..epoch1.png">
