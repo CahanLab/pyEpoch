@@ -295,9 +295,19 @@ In this section, PyEpoch requires at least two reconstructed networks (in order 
 
 First, load in the data. The reconstructed network and epoch assignments from the previous section are provided here as 'net1' and epochs1':
 ```Python
-# load in two anndata instances
+import numpy as np
+import pandas as pd
+import scanpy as sc
+import pyEpoch as Epoch
+```
+
+```Python
+# load in two anndata instances and mmTFs
 adata2=sc.read_h5ad("example1_anndata.h5ad")
 adata3=sc.read_h5ad("example2_anndata.h5ad")
+
+mmTFs=pd.read_csv("mmTFs_epoch.csv", header = None)
+mmTFs=list(mmTFs[0].values)
 ```
 
 ### Compute the differential network
