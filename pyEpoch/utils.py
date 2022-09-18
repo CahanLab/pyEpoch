@@ -115,3 +115,37 @@ def grnKsmooth(adata,BW=.25,pseudotime_column=None):
 
     return adata
 
+
+def add_interactions_types(adata, grn= "dynamic_GRN"):
+    if type(adata.uns[grn])==pd.core.frame.DataFrame:
+        GRN=adata.uns[grn]
+        if "corr" not in GRN.columns:
+            sys.exit("Missing 'corr' information. Run reconstruction first.")
+        else:
+            true_false=GRN["corr"]>0
+            activation=[]
+            for i in true_false:
+                if i==True:
+                    activation.append("activation")
+                else:
+                    activation.append("repression")
+            GRN["interaction"]=activation
+        return GRN
+
+    elif type(adata.uns[grn])==dict:
+        GRN=adata.uns[grn]
+        for i in GRN:
+            if "corr" not in GRN[i].columns:
+                sys.exit("Missing 'corr' information. Run reconstruction first.")
+            else:
+                true_false=GRN[i]["corr"]>0
+                activation=[]
+                for j in true_false:
+                    if j==True:
+                        activation.append("activation")
+                    else:
+                        activation.append("repression")
+            GRN[i]["interaction"]=activation
+        return GRN
+
+

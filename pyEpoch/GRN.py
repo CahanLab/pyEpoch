@@ -7,6 +7,7 @@
 import numpy as np
 import pandas as pd
 import scanpy as sc
+import loess as lo
 from sklearn.preprocessing import KBinsDiscretizer
 from sklearn.metrics import normalized_mutual_info_score
 import sys
@@ -41,6 +42,26 @@ def gamFit(expMat,genes,celltime):
         return p
     ans=expMat.loc[genes2][celltime.index].apply(abcd,axis=1)
     return ans
+
+
+# def loessFit(expMat,genes,celltime):
+
+#     genes2=(set(genes) & set(expMat.index))
+#     def abcd(input_data):
+#         z=pd.DataFrame()
+#         z["z"]=input_data.values
+#         z["t"]=celltime.values
+#         z.index=expMat.columns
+#         X=celltime.values.reshape((celltime.shape[0],1))
+#         y=z["z"].values
+
+#         xout, yout, wout = loess_1d(X, y, xnew=None, degree=1, frac=0.2, npoints=None, rotate=False, sigy=None)
+        
+#         # gam=GAM(l(0)).fit(X,y)
+#         # p=gam.statistics_['p_values'][0]
+#         return p
+#     ans=expMat.loc[genes2][celltime.index].apply(abcd,axis=1)
+#     return ans
 
 
 # In[ ]:
@@ -115,8 +136,6 @@ def findDynGenes(adata, pseudotime_column="dpt_pseudotime", group_column=None, p
 
 # In[ ]:
 
-
-#def build_mim(exp,estimator="pearson"):
 def build_mim(exp,estimator="pearson"):
     genes=exp.index
     if estimator=="pearson":
@@ -139,31 +158,143 @@ def build_mim(exp,estimator="pearson"):
         est=KBinsDiscretizer(n_bins=int(np.sqrt(exp.shape[0])),encode='ordinal',strategy="uniform")
         est.fit(exp.T)
         dataset=est.transform(exp.T)
-        #dataset=pd.DataFrame(dataset)
-        #dataset=dataset+1
-        #mim=pd.DataFrame()#create empty mim dataframe
-        #create dataframe with mutual infrormation for each gene pair 
-        #texp is the expression matrix with the genes as columns and the samples as rows
         print("MI")
-        #mim = np.array([[normalized_mutual_info_score(dataset[:,i],dataset[:,j]) for i in range(dataset.shape[1])] for j in range(dataset.shape[1])])
-        mi = [[normalized_mutual_info_score(dataset[:,i],dataset[:,j]) for i in range(0,j+1)] for j in range(dataset.shape[1])]
-        mim = np.zeros((dataset.shape[1],dataset.shape[1]))
-        mask = np.tril(np.ones((dataset.shape[1],dataset.shape[1])),0) != 0
-        mim[mask]=np.concatenate(mi)
-
-        i_upper = np.triu_indices(dataset.shape[1], 0)
-        mim[i_upper] = mim.T[i_upper]
-        np.fill_diagonal(mim,0)
-
-        print("format")
-        mim = pd.DataFrame(mim)
-        #mim=mim.set_index(dataset.columns)
-        #mim=mim.replace(1, 0)  # for replacing 1 to 0
-        mim.index=genes
-        mim.columns=genes
+        nrows = dataset.shape[0]
+        ncols = dataset.shape[1]
+        print(nrows)
+        print(ncols)
+        mim = buildMIM(dataset, nrows, ncols)        
         return mim
     else:
         sys.exit("Must enter valid estimator: MI or pearson.")
+
+# def build_mim(exp,estimator="pearson"):
+#     genes=exp.index
+#     if estimator=="pearson":
+#         est=KBinsDiscretizer(n_bins=int(np.sqrt(exp.shape[0])),encode='ordinal',strategy="uniform")
+#         est.fit(exp.T)
+#         dataset=est.transform(exp.T)
+#         dataset=pd.DataFrame(dataset)
+#         #dataset=dataset+1
+#         mim=dataset.corr(method="pearson")**2
+#         np.fill_diagonal(mim.values, 0)
+#         maxi=0.999999
+#         mim[mim>maxi]=maxi
+#         mim=-.5*np.log(1-mim)
+#         mim[mim<0]=0
+#         mim.index=genes
+#         mim.columns=genes
+#         return mim
+#     elif estimator=="MI":
+#         print('discretize')
+#         est=KBinsDiscretizer(n_bins=int(np.sqrt(exp.shape[0])),encode='ordinal',strategy="uniform")
+#         est.fit(exp.T)
+#         dataset=est.transform(exp.T)
+#         #dataset=pd.DataFrame(dataset)
+#         #dataset=dataset+1
+#         #mim=pd.DataFrame()#create empty mim dataframe
+#         #create dataframe with mutual infrormation for each gene pair 
+#         #texp is the expression matrix with the genes as columns and the samples as rows
+#         print("MI")
+#         #mim = np.array([[normalized_mutual_info_score(dataset[:,i],dataset[:,j]) for i in range(dataset.shape[1])] for j in range(dataset.shape[1])])
+#         mi = [[normalized_mutual_info_score(dataset[:,i],dataset[:,j]) for i in range(0,j+1)] for j in range(dataset.shape[1])]
+#         mim = np.zeros((dataset.shape[1],dataset.shape[1]))
+#         mask = np.tril(np.ones((dataset.shape[1],dataset.shape[1])),0) != 0
+#         mim[mask]=np.concatenate(mi)
+
+#         i_upper = np.triu_indices(dataset.shape[1], 0)
+#         mim[i_upper] = mim.T[i_upper]
+#         np.fill_diagonal(mim,0)
+
+#         print("format")
+#         mim = pd.DataFrame(mim)
+#         #mim=mim.set_index(dataset.columns)
+#         #mim=mim.replace(1, 0)  # for replacing 1 to 0
+#         mim.index=genes
+#         mim.columns=genes
+#         return mim
+#     else:
+#         sys.exit("Must enter valid estimator: MI or pearson.")
+
+
+
+def buildMIM(data, nrows, ncols): ## choice is the choice of entropy
+    ##res = pd.DataFrame(index=range(nrows),columns=range(ncols))
+    # res = np.ndarray(shape=(nrows, ncols))
+    res = [None] * (ncols * ncols)
+    sel = [None]* ncols
+    for i in range(ncols):
+        res[i*(ncols) + i] = 0
+        sel[i] = False
+    
+    
+    for i in range(ncols):
+        sel[i] = True
+        res[i*(ncols) + i] = entropy(data, nrows, ncols, sel)
+        # print(res[i*(ncols) + i]) 
+        sel[i] = False
+        
+    for i in range(1, ncols):
+        sel[i] = True
+        for j in range(i):
+            sel[j] = True
+            # print(res)
+            res[j*(ncols) + i] = res[i*(ncols) + i] + res[j*(ncols) + j] - entropy(data, nrows, ncols, sel)
+            res[i*(ncols) + j] = res[j*(ncols) + i]
+            # try:
+            #     res[j*(ncols) + i] = res[i*(ncols) + i] + res[j*(ncols) + j] - entropy(data, nrows, ncols, sel)
+            #     res[i*(ncols) + j] = res[j*(ncols) + i]
+            # except IndexError:
+            #     break
+            sel[j] = False
+        sel[i] = False
+    # print(res) 
+    res = np.nan_to_num(res)
+    res = np.reshape(res, (ncols, ncols))
+    res = pd.DataFrame(res)
+    print(res)
+    return res
+
+
+
+def entropy(data, nrows, ncols, v):
+    data = data.flatten()
+    freq = dict()
+    sel = []
+    ok = True
+    nsample_ok = 0
+    H = 0
+    for s in range(nrows):
+        ok = True
+        sel.clear()
+        for i in range(ncols):
+            if v[i] == True:
+                if data[s+(i*(nrows))] is not None:
+                    sel.append(data[s+(i*nrows)])
+                else:
+                    ok = False
+        if ok == True:
+            try:
+                freq[tuple(sel)] += 1
+            except:
+                freq[tuple(sel)] = 0
+                
+            nsample_ok += 1
+    
+    H = emp_entropy(freq,nsample_ok)
+    return H            
+  
+    
+    
+
+    
+    
+def emp_entropy(freq: dict, nsample: int):
+    e = 0.0
+    for x in freq.values():
+        e -= x*np.log(x)
+    return np.log(nsample) + e/nsample
+
 
 
 # In[ ]:
@@ -201,6 +332,8 @@ def clr(mim):
 def reconstructGRN(adata,tfs,zThresh=0,method="pearson"):
     
     expDat = makeExpMat(adata)
+    adata.uns['tfs'] = tfs
+    print("tfs stored in .uns['tfs']")
     dgenes = adata.uns['dgenes']
     cells = adata.uns['cells'].index.tolist()
 
@@ -225,7 +358,6 @@ def reconstructGRN(adata,tfs,zThresh=0,method="pearson"):
     xnet=clr(mim)
     xcorr=texp.corr()
     tfsI= list(set(tfs) & set(texp.columns))
-    #print(tfsI)
     xnet=xnet.loc[tfsI]
     xcorr=xcorr.loc[tfsI]
     grn=cn_extractRegsDF(xnet,xcorr,zThresh)

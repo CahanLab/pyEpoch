@@ -9,4 +9,6 @@ from .GRN import *
 from .crossweighting import *
 from .dynamicGRN import *
 from .plotting import *
+from .networkComparison import *
+from .signaling import *
 

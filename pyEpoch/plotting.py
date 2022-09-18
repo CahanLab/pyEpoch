@@ -19,7 +19,55 @@ from .utils import *
 # In[ ]:
 
 
-def plot_dynamic_network(grn,tfs,only_TFs=True,order=None,thresh=None):
+def set_figure_params(
+    dpi: int = 200,
+    figsize: int = None,
+    facecolor: str = None,
+    ipython_format: str = "png2x"
+):
+    """\
+    Set resolution/size, styling and format of figures.
+    Parameters
+    ----------
+    dpi
+        Resolution of rendered figures – this influences the size of figures in notebooks.
+    fontsize
+        Set the fontsize for several `rcParams` entries. Ignored if `scanpy=False`.
+    figsize
+        Set plt.rcParams['figure.figsize'].
+    color_map
+        Convenience method for setting the default color map. Ignored if `scanpy=False`.
+    facecolor
+        Sets backgrounds via `rcParams['figure.facecolor'] = facecolor` and
+        `rcParams['axes.facecolor'] = facecolor`.
+    """
+#     if self._is_run_from_ipython():
+#         import IPython
+
+#         if isinstance(ipython_format, str):
+#             ipython_format = [ipython_format]
+#         IPython.display.set_matplotlib_formats(*ipython_format)
+
+    from matplotlib import rcParams
+
+    if dpi is not None:
+        rcParams["figure.dpi"] = dpi
+    if facecolor is not None:
+        rcParams['axes.facecolor'] = facecolor
+    global figsize_global
+    if figsize is not None:
+        rcParams['figure.figsize'] = figsize
+        figsize_global = figsize
+    else:
+        figsize_global = None
+
+
+        
+        
+
+def plot_dynamic_network(adata,only_TFs=True,order=None,thresh=None,save=False):
+    grn = adata.uns["dynamic_GRN"]
+    tfs = adata.uns['tfs']
     if type(grn)==dict:
         if order != None:
             grn = {k: grn[k] for k in order}
@@ -36,7 +84,7 @@ def plot_dynamic_network(grn,tfs,only_TFs=True,order=None,thresh=None):
                 df=df.loc[df["zscore"]>thresh]
 
             interactions=[]
-            for k in df["Correlation"]:
+            for k in df["corr"]:
                 if k>0:
                     interactions.append("activation")
                 else:
@@ -52,8 +100,11 @@ def plot_dynamic_network(grn,tfs,only_TFs=True,order=None,thresh=None):
                 else:
                     G.add_edge(a["TF"],a["TG"],color="r")
 
-
-            fig=plt.figure(figsize=(10,10))
+            if figsize_global is not None:
+                fig = plt.figure(figsize=figsize_global)
+            else:
+                fig = plt.figure(figsize=(10,10))
+            
             edges = G.edges()
             colors = [G[u][v]['color'] for u,v in edges]
             #nx.draw(G, edge_color=colors, with_labels=True, font_weight='bold')
@@ -85,7 +136,10 @@ def plot_dynamic_network(grn,tfs,only_TFs=True,order=None,thresh=None):
             plt.title(i,fontsize=20)
             plt.legend(["a plot"])
             plt.legend(proxies,labels,fontsize=20)
+            if save == True:
+                plt.savefig('dynamic_network: ' + i + '.png', dpi=300)
             plt.show()
+            
     else:
         df=grn
         if only_TFs==True:
@@ -111,8 +165,11 @@ def plot_dynamic_network(grn,tfs,only_TFs=True,order=None,thresh=None):
             else:
                 G.add_edge(a["TF"],a["TG"],color="r")
 
-
-        fig=plt.figure(figsize=(10,10))
+        if figsize_global is not None:
+            fig = plt.figure(figsize=figsize_global)
+        else:
+            fig = plt.figure(figsize=(10,10))
+            
         edges = G.edges()
         colors = [G[u][v]['color'] for u,v in edges]
         #nx.draw(G, edge_color=colors, with_labels=True, font_weight='bold')
@@ -144,22 +201,173 @@ def plot_dynamic_network(grn,tfs,only_TFs=True,order=None,thresh=None):
         plt.title("Network",fontsize=20)
         plt.legend(["a plot"])
         plt.legend(proxies,labels,fontsize=20)
+        if save == True:
+            plt.savefig('dynamic_network.png', dpi=300)
         plt.show()
+        
+        
+
+# General GRN plotting function. Can add more details later
+def plot_network(grn,only_TFs=True,order=None,thresh=None,save=False):
+    tfs = adata.uns['tfs']
+    if type(grn)==dict:
+        if order != None:
+            grn = {k: grn[k] for k in order}
+
+
+        for i in list(grn.keys()):
+            print(i)
+            df=grn[i]
+
+            if only_TFs==True:
+                df=df.loc[df["TG"].isin(tfs)]
+
+            if thresh != None:
+                df=df.loc[df["zscore"]>thresh]
+
+            interactions=[]
+            for k in df["corr"]:
+                if k>0:
+                    interactions.append("activation")
+                else:
+                    interactions.append("repression")
+            df["interactions"]=interactions
+
+
+            G=nx.Graph()
+            for j in df.index:
+                a=df.loc[j]
+                if a["interactions"]=="activation":
+                    G.add_edge(a["TF"],a["TG"],color="b")
+                else:
+                    G.add_edge(a["TF"],a["TG"],color="r")
+
+            if figsize_global is not None:
+                fig = plt.figure(figsize=figsize_global)
+            else:
+                fig = plt.figure(figsize=(10,10))
+            
+            edges = G.edges()
+            colors = [G[u][v]['color'] for u,v in edges]
+            #nx.draw(G, edge_color=colors, with_labels=True, font_weight='bold')
+
+            #legend stuff
+            _c = 'rb' 
+            clrs = [c for c in _c[:2]]
+            pos=nx.spring_layout(G)
+
+
+            h1 = nx.draw_networkx_nodes(G, pos=pos, node_color = 'grey',
+                                    alpha = 0.9, node_size = 300, linewidths=1)
+
+
+            h2 = nx.draw_networkx_edges(G, pos=pos, width=1, edge_color=colors)
+
+
+            h3 = nx.draw_networkx_labels(G, pos=pos, font_size=8, font_color='k',font_weight='bold')
+
+
+            def make_proxy(clr, mappable, **kwargs):
+                return Line2D([0, 1], [0, 1], color=clr, **kwargs)
+            proxies = [make_proxy(clr, h2, lw=5) for clr in clrs]
+            labels=["repression","activation"]
+            #end legend stuff
+
+
+
+            plt.title(i,fontsize=20)
+            plt.legend(["a plot"])
+            plt.legend(proxies,labels,fontsize=20)
+            if save == True:
+                plt.savefig('dynamic_network: ' + i + '.png', dpi=300)
+            plt.show()
+            
+    else:
+        df=grn
+        if only_TFs==True:
+            df=df.loc[df["TG"].isin(tfs)]
+
+        if thresh != None:
+            df=df.loc[df["zscore"]>thresh]
+
+        interactions=[]
+        for k in df["Correlation"]:
+            if k>0:
+                interactions.append("activation")
+            else:
+                interactions.append("repression")
+        df["interactions"]=interactions
+
+
+        G=nx.Graph()
+        for j in df.index:
+            a=df.loc[j]
+            if a["interactions"]=="activation":
+                G.add_edge(a["TF"],a["TG"],color="b")
+            else:
+                G.add_edge(a["TF"],a["TG"],color="r")
+
+        if figsize_global is not None:
+            fig = plt.figure(figsize=figsize_global)
+        else:
+            fig = plt.figure(figsize=(10,10))
+            
+        edges = G.edges()
+        colors = [G[u][v]['color'] for u,v in edges]
+        #nx.draw(G, edge_color=colors, with_labels=True, font_weight='bold')
+
+        #legend stuff
+        _c = 'rb' 
+        clrs = [c for c in _c[:2]]
+        pos=nx.spring_layout(G)
+
+
+        h1 = nx.draw_networkx_nodes(G, pos=pos, node_color = 'grey',
+                                alpha = 0.9, node_size = 300, linewidths=1)
+
+
+        h2 = nx.draw_networkx_edges(G, pos=pos, width=1, edge_color=colors)
+
+
+        h3 = nx.draw_networkx_labels(G, pos=pos, font_size=8, font_color='k',font_weight='bold')
+
+
+        def make_proxy(clr, mappable, **kwargs):
+            return Line2D([0, 1], [0, 1], color=clr, **kwargs)
+        proxies = [make_proxy(clr, h2, lw=5) for clr in clrs]
+        labels=["repression","activation"]
+        #end legend stuff
+
+
+
+        plt.title("Network",fontsize=20)
+        plt.legend(["a plot"])
+        plt.legend(proxies,labels,fontsize=20)
+        if save == True:
+            plt.savefig('dynamic_network.png', dpi=300)
+        plt.show()
+        
+        
+
 
 # In[ ]:
+
 
 
 #plot_top_regulators<-function(grn,gene_ranks,tfs,numTopTFs=5, numTargets=5, only_TFs=TRUE,order=NULL)
 #plot_top_regulators(dynamic_grn, gene_rank, mmTFs, only_TFs=FALSE)
 
-def plot_top_regulators(grn,gene_ranks,tfs,numTopTFs=5,numTargets=5, only_TFs=True, order=None):
-    #grn=dynamic_grn
-    #gene_ranks=gene_rank
-    #tfs=list(mmTFs["mmTFs"].values)
+def plot_top_regulators(adata,gene_ranks="pagerank", numTopTFs=5,numTargets=5, only_TFs=True, order=None, save=False):
+    #adata = anndata
+    #gene_ranks= "pagerank" or "betweenness_degree"
     #numTopTFs=5
     #numTargets=5
     #only_TFs=True
     #order=None
+    
+    grn = adata.uns["dynamic_GRN"]
+    tfs = adata.uns['tfs']
+    gene_ranks = adata.uns[gene_ranks]
 
     if order != None:
             grn = {k: grn[k] for k in order}
@@ -194,7 +402,11 @@ def plot_top_regulators(grn,gene_ranks,tfs,numTopTFs=5,numTargets=5, only_TFs=Tr
         for reg in topregs:
             targets=list(df.loc[df["TF"]==reg]["TG"].values)
             rank_targets=rank.loc[targets,]
-            rank_targets=rank_targets.sort_values(by=['page_rank'],ascending=False)
+            
+            if gene_ranks == "pagerank":
+                rank_targets=rank_targets.sort_values(by=["page_rank"],ascending=False)
+            elif gene_ranks == "betweenness_degree":
+                rank_targets=rank_targets.sort_values(by=["betweenness*degree"],ascending=False)
 
             num=numTargets
             if numTargets>len(targets):
@@ -218,7 +430,11 @@ def plot_top_regulators(grn,gene_ranks,tfs,numTopTFs=5,numTargets=5, only_TFs=Tr
                 G.add_edge(a["TF"],a["TG"],color="r")
 
 
-        fig=plt.figure(figsize=(10,10))
+        if figsize_global is not None:
+            fig = plt.figure(figsize=figsize_global)
+        else:
+            fig = plt.figure(figsize=(10,10))
+            
         edges = G.edges()
         colors = [G[u][v]['color'] for u,v in edges]
         #nx.draw(G, edge_color=colors, with_labels=True, font_weight='bold')
@@ -250,24 +466,29 @@ def plot_top_regulators(grn,gene_ranks,tfs,numTopTFs=5,numTargets=5, only_TFs=Tr
         plt.title(epoch,fontsize=20)
         plt.legend(["a plot"])
         plt.legend(proxies,labels,fontsize=20)
+        if save == True:
+            plt.savefig('top_regulators: ' + epoch + '.png', dpi=300)
         plt.show()
-    
+
+
+
 
 
 # In[ ]:
 
 
-#plot_targets_with_top_regulators<-function(grn,targets,weight_column="zscore",gene_ranks=NULL,numTopRegulators=5,order=NULL){
-#plot_targets_with_top_regulators(dynamic_grn,interesting_targets,weight_column="zscore")
+#plot_targets_with_top_regulators<-function(grn,targets,rank_metric="zscore",gene_ranks=NULL,numTopRegulators=5,order=NULL){
+#plot_targets_with_top_regulators(dynamic_grn,interesting_targets,rank_metric="zscore")
 
 
-def plot_targets_with_top_regulators(grn,targets,weight_column="zscore",gene_ranks=None,numTopRegulators=5,order=None):
+def plot_targets_with_top_regulators(adata,targets,rank_metric="zscore",numTopRegulators=5,order=None, save=False):
     #grn=dynamic_grn
     #targets=interesting_targets
-    #weight_column="zscore"
-    #gene_ranks=gene_rank
+    #rank_metric="zscore" or "pagerank" or "betweenness_degree"
     #numTopRegulators=5
     #order=None
+    
+    grn = adata.uns["dynamic_GRN"]
 
     if order != None:
         grn = {k: grn[k] for k in order}
@@ -296,14 +517,11 @@ def plot_targets_with_top_regulators(grn,targets,weight_column="zscore",gene_ran
         #find top regulators for each target
         edges_to_keep=pd.DataFrame(columns=["TF","TG","interactions"])
 
-        if weight_column=="page_rank":
+        if rank_metric=="page_rank":
+            gene_ranks = adata.uns["pagerank"]
             print("pagerank")
             for tg in tgs:
                 #tg=tgs[0]
-
-                if gene_ranks==None:
-                    sys.exit("Need to supply gene ranks")
-
                 rank=gene_ranks[epoch]
                 regs_of_target=list(df.loc[df["TG"]==tg]["TF"])
                 rank_regs=rank.loc[regs_of_target]
@@ -316,9 +534,26 @@ def plot_targets_with_top_regulators(grn,targets,weight_column="zscore",gene_ran
                 edges=edges.loc[edges["TF"].isin(top_regs)][["TF","TG","interactions"]]
 
                 edges_to_keep=pd.concat([edges_to_keep,edges])
+        
+        elif rank_metric == "betweenness_degree":
+            gene_ranks = adata.uns["betweenness_degree"]
+            print("betweenness_degree")
+            for tg in tgs:
+                #tg=tgs[0]
+                rank=gene_ranks[epoch]
+                regs_of_target=list(df.loc[df["TG"]==tg]["TF"])
+                rank_regs=rank.loc[regs_of_target]
+
+                rank_regs=rank_regs.sort_values(by=['betweenness_degree'],ascending=False)
+
+                top_regs=list(rank_regs.index)[0:numTopRegulators]
+
+                edges=df.loc[df["TG"]==tg]
+                edges=edges.loc[edges["TF"].isin(top_regs)][["TF","TG","interactions"]]
+
+                edges_to_keep=pd.concat([edges_to_keep,edges])
         else:
             for tg in tgs:
-
                 edges=df.loc[df["TG"]==tg]
                 edges=edges.sort_values(by=["zscore"],ascending=False)
                 edges=edges.iloc[0:numTopRegulators][["TG","TF","interactions"]]
@@ -334,8 +569,12 @@ def plot_targets_with_top_regulators(grn,targets,weight_column="zscore",gene_ran
 
         G.add_nodes_from(edges_to_keep["TF"],s="^")
         G.add_nodes_from(edges_to_keep["TG"],s="o")
+        
+        if figsize_global is not None:
+            fig, ax = plt.subplots(figsize=figsize_global)
+        else:
+            fig, ax = plt.subplots(figsize=(10,10))      
 
-        fig,ax=plt.subplots(figsize=(10,10))
         edges = G.edges()
         colors = [G[u][v]['color'] for u,v in edges]
         #nx.draw(G, edge_color=colors, with_labels=True, font_weight='bold')
@@ -373,15 +612,17 @@ def plot_targets_with_top_regulators(grn,targets,weight_column="zscore",gene_ran
         ax.add_artist(leg)
         plt.legend(["a plot"])
         plt.legend(proxies,labels,fontsize=20, loc=(1.03,0.5))
+        if save == True:
+            plt.savefig('targets_with_top_regulators: ' + epoch + '.png', dpi=300)
         plt.show()
 
 
 # In[ ]:
 
 
-def hm_dyn(adata,limit_to=None,smooth=True,topX=25,cRow=False,cCol=False,limits=[0,10],toScale=False,fontsize_row=4,geneAnn=False):
+def hm_dyn(adata,limit_to=None,smooth=True,topX=25,cRow=False,cCol=False,limits=[0,10],toScale=False,fontsize_row=4,geneAnn=False, save=None):
     #expDat=expSmoothed
-    #dynRes=dynTFs
+    #dynRes=dynTF
     #topX=25
     #cRow=False
     #cCol=False
@@ -406,7 +647,7 @@ def hm_dyn(adata,limit_to=None,smooth=True,topX=25,cRow=False,cCol=False,limits=
     sampTab = adata.uns['cells'].copy()
     genes = adata.uns['genes'].copy()
 
-    if limit_to is not none:
+    if limit_to is not None:
         keepgenes = [x for x in genes.index.tolist() if x in limit_to]
         genes = genes.loc[keepgenes]
 
@@ -455,7 +696,15 @@ def hm_dyn(adata,limit_to=None,smooth=True,topX=25,cRow=False,cCol=False,limits=
 
     sns.set_theme()
     sns.set(font_scale=.5)
-    fig, ax = plt.subplots(figsize=(10,10))         
+    
+    if figsize_global is not None:
+        fig, ax = plt.subplots(figsize=figsize_global)
+    else:
+        fig, ax = plt.subplots(figsize=(6,8))         
+        
     ax = sns.heatmap(value,yticklabels=True,xticklabels=False)
+    if save == True:
+        plt.savefig('heatmap.png', dpi=300)
     plt.show()
+
     return ax
