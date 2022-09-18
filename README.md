@@ -288,12 +288,13 @@ Epoch.plot_dynamic_network(adata,only_TFs=True,order=["epoch1..epoch1","epoch1..
 ## Example Walk Thru 2: Network Comparison <a name="example2"></a>
 We can use PyEpoch to compare networks. Here's an example of doing so at the edge level. In this instance we use PyEpoch to extract "differential networks".
 
-Starting with the network we reconstructed in Example 0, we can compare it to a network reconstructed using data collected from mESC directed differentiation toward mesoderm guided by a separate treatment. Alternatively, such a method may be used to compare in vitro networks with in vivo networks.
+Starting with the network we reconstructed in Example 1, we can compare it to a network reconstructed using data collected from mESC directed differentiation toward mesoderm guided by a separate treatment. Alternatively, such a method may be used to compare in vitro networks with in vivo networks.
 
 ### Data
 In this section, PyEpoch requires at least two reconstructed networks (in order to carry out the comparison) and the epoch assignments for these networks. These inputs are derived from the reconstruction in previous sections.
 
-First, load in the data. The reconstructed network and epoch assignments from the previous section are provided here as 'net1' and epochs1':
+First, load in the data. The reconstructed network and epoch assignments from the previous section are provided here as adata.uns["dynamic_GRN"] and adata.uns["epochs"]:
+
 ```Python
 import numpy as np
 import pandas as pd
@@ -341,13 +342,20 @@ We can use PyEpoch to integrate signaling activity and trace paths through the n
 ### Data
 In this section, PyEpoch requires a reconstructed network (which can be derived from Example 1: Reconstruction. As described below, PyEpoch will also require pre-computed effector targets.
 
-After reconstruction:
+```Python
+import numpy as np
+import pandas as pd
+import scanpy as sc
+import pyEpoch as Epoch
+```
 
 ```Python
+adata=sc.read_loom("sampled_mesoderm_WAG.loom",sparse=False)
 expMat = Epoch.makeExpMat(adata)
 sampTab = Epoch.makeSampTab(adata)
 
-dynamic_grn = adata.uns['dynamic_GRN']
+adata1 = sc.read_h5ad("example3_anndata.h5ad")
+dynamic_grn = adata1.uns['dynamic_GRN']
 ```
 ### Get effector targets
 Effector targets of major signaling pathways are pre-computed and available within PyEpoch (mouse: see 'data/effectortargets_mouse.rda'). These lists were computed by: (1) aquiring binding score (MACS2) data for 18 signaling effector TFs from the ChIP-Atlas (Oki et al., 2018), (2) target genes were ranked by maximum binding score, (3) the top 2000 targets were retained (or all retained, if less than 2000 targets).
