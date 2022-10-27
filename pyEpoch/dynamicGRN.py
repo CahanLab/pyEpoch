@@ -2,8 +2,6 @@
 # coding: utf-8
 
 
-
-
 import numpy as np
 import pandas as pd
 import scanpy as sc
@@ -223,8 +221,16 @@ def assign_epochs(adata, method="active_expression",pThresh_dyn=.05,pThresh_DE=.
             mean_expression=pd.concat([mean_expression,concatted],axis=0)
 
 
-    epochs["mean_expression"]=mean_expression
+    mean_expression['gene'] = mean_expression.index
+    #epochs["mean_expression"]=mean_expression
+    mean_expression = mean_expression.reset_index()
+    mean_expression["mean_expression"] = pd.to_numeric(mean_expression.mean_expression)
+    adata.uns['mean_expression']=mean_expression
     adata.uns['epochs']=epochs
+
+    print("Epoch gene assignments stored in .uns['epochs'].")
+    print("Mean expression per epoch stored in .uns['mean_expression'].")
+
     return adata
 
 
@@ -376,9 +382,15 @@ def assign_epochs_simple(adata,num_epochs=2,pThresh_dyn=.01,toScale=False):
     cells2=cells.loc[cells["cell_name"].isin(t1.index)]
     cells2["epoch"]=cellsEps.values()
 
-    epochs["mean_expression"]=mean_expression
+    #epochs["mean_expression"]=mean_expression
     
     adata.uns['epochs']=epochs
+    mean_expression = mean_expression.reset_index()
+    mean_expression["mean_expression"] = pd.to_numeric(mean_expression.mean_expression)
+    adata.uns['mean_expression']=mean_expression
+
+    print("Epoch gene assignments stored in .uns['epochs'].")
+    print("Mean expression per epoch stored in .uns['mean_expression'].")
     return adata
 
 # In[ ]:
@@ -389,7 +401,7 @@ def epochGRN(adata, epoch_network=None):
     grnDF = adata.uns['grnDF'].copy()
     epochs = adata.uns['epochs'].copy()
 
-    epochs.pop('mean_expression', None)
+    #epochs.pop('mean_expression', None)
     keys=epochs.keys()
 
     all_dyngenes=[]
@@ -500,6 +512,8 @@ def compute_pagerank(adata,weight_column="weighted_score",directed_graph=False):
         pagerank["is_regulator"]=list(pd.Series(pagerank["gene"]).isin(np.unique(df["TF"])))
         ranks[i]=pagerank
     adata.uns["pagerank"]=ranks
+
+    print("PageRank stored in .uns['pagerank'].")
     return adata
 
 
@@ -547,6 +561,7 @@ def compute_betweenness_degree(adata,weight_column="weighted_score",directed_gra
         betweenness_degree["is_regulator"]=list(pd.Series(betweenness_degree["gene"]).isin(np.unique(df["TF"])))
         ranks[i]=betweenness_degree
         
-    adata.uns["betweenness_degree"]=ranks    
+    adata.uns["betweenness_degree"]=ranks
+    print("Betweenness-degree stored in .uns['betweenness_degree'].")    
     return adata
 

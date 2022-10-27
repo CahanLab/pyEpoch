@@ -1,9 +1,3 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[ ]:
-
-
 import numpy as np
 import pandas as pd
 import scanpy as sc
@@ -11,9 +5,10 @@ import skfda
 from pygam import GAM, s,l
 from skfda import FDataGrid
 import skfda.preprocessing.smoothing.kernel_smoothers as ks
+import igraph as igraph
+import scipy
 
 
-# In[ ]:
 
 
 def makeExpMat(adata):
@@ -21,7 +16,6 @@ def makeExpMat(adata):
     return expMat
 
 
-# In[ ]:
 
 
 def makeSampTab(adata):
@@ -29,7 +23,6 @@ def makeSampTab(adata):
     return sampTab
 
 
-# In[ ]:
 
 def gamFit(expMat,genes,celltime):
 
@@ -49,7 +42,6 @@ def gamFit(expMat,genes,celltime):
     return ans
 
 
-# In[ ]:
 
 
 def grnKsmooth(adata,BW=.25,pseudotime_column=None):
@@ -116,36 +108,210 @@ def grnKsmooth(adata,BW=.25,pseudotime_column=None):
     return adata
 
 
-def add_interactions_types(adata, grn= "dynamic_GRN"):
+# def add_interactions_types(adata, grn="dynamic_GRN"):
+#     if type(adata.uns[grn])==pd.core.frame.DataFrame:
+#         GRN=adata.uns[grn]
+#         if "corr" not in GRN.columns:
+#             sys.exit("Missing 'corr' information. Run reconstruction first.")
+#         else:
+#             true_false=GRN["corr"]>0
+#             activation=[]
+#             for i in true_false:
+#                 if i==True:
+#                     activation.append("activation")
+#                 else:
+#                     activation.append("repression")
+#             GRN["interaction"]=activation
+#         return GRN
+
+#     elif type(adata.uns[grn])==dict:
+#         GRN=adata.uns[grn]
+#         for i in GRN:
+#             if "corr" not in GRN[i].columns:
+#                 sys.exit("Missing 'corr' information. Run reconstruction first.")
+#             else:
+#                 true_false=GRN[i]["corr"]>0
+#                 activation=[]
+#                 for j in true_false:
+#                     if j==True:
+#                         activation.append("activation")
+#                     else:
+#                         activation.append("repression")
+#             GRN[i]["interaction"]=activation
+#         return GRN
+
+
+
+
+# New and updated... 
+# If correlation is missing, compute and add it in
+def add_interaction_type(adata, grn="dynamic_GRN"):
     if type(adata.uns[grn])==pd.core.frame.DataFrame:
         GRN=adata.uns[grn]
         if "corr" not in GRN.columns:
-            sys.exit("Missing 'corr' information. Run reconstruction first.")
-        else:
-            true_false=GRN["corr"]>0
-            activation=[]
-            for i in true_false:
-                if i==True:
-                    activation.append("activation")
-                else:
-                    activation.append("repression")
-            GRN["interaction"]=activation
-        return GRN
+            print("No correlation stored, computing correlation.")
+            GRN = add_corr(GRN,adata)
+
+        true_false=GRN["corr"]>0
+        activation=[]
+        for i in true_false:
+            if i==True:
+                activation.append("activation")
+            else:
+                activation.append("repression")
+        GRN["interaction"]=activation
+        adata.uns[grn] = GRN
 
     elif type(adata.uns[grn])==dict:
         GRN=adata.uns[grn]
         for i in GRN:
             if "corr" not in GRN[i].columns:
-                sys.exit("Missing 'corr' information. Run reconstruction first.")
-            else:
-                true_false=GRN[i]["corr"]>0
-                activation=[]
-                for j in true_false:
-                    if j==True:
-                        activation.append("activation")
-                    else:
-                        activation.append("repression")
+                print("No correlation stored, computing correlation.")
+                GRN[i] = add_corr(GRN[i],adata)
+
+            true_false=GRN[i]["corr"]>0
+            activation=[]
+            for j in true_false:
+                if j==True:
+                    activation.append("activation")
+                else:
+                    activation.append("repression")
             GRN[i]["interaction"]=activation
-        return GRN
+        adata.uns[grn] = GRN
+
+    return adata
+
+
+
+# a little side function...
+def add_corr(grnDF,adata):
+
+    if scipy.sparse.issparse(adata.X):
+        expX = pd.DataFrame(adata.X.todense())
+    else:
+        expX=pd.DataFrame(adata.X)
+    
+    expX.index=adata.obs_names
+    expX.columns=adata.var_names
+
+    corrmat=expX.corr()
+    corrmat['TG'] = corrmat.index
+    corrdf=pd.melt(corrmat, id_vars=["TG"])
+    corrdf.columns=["TG","TF","corr"]
+
+    newdf = grnDF.merge(corrdf,on=['TG','TF'],how="left")
+
+    return newdf
+
+
+
+
+
+def find_communities(adata,grn="dynamic_GRN",use_weights=False,weight_column=None,communities_slot=None):
+    #use_weights=True
+    #weight_column="weighted_score"
+
+    if type(adata.uns[grn])==pd.core.frame.DataFrame:
+
+        if communities_slot is None:
+            communities_slot = "static_communities"
+
+        GRN=adata.uns[grn]
+
+        if use_weights==True:
+            weight_value=GRN[weight_column]
+        else:
+            weight_value=None
+
+        tuples = [tuple(x) for x in GRN.values]
+        Gm = igraph.Graph.TupleList(tuples, directed = False)
+        
+        genes_ordered=[]
+        for i in Gm.vs:
+            genes_ordered.append(i["name"])
+
+        communities=Gm.community_multilevel(weights=weight_value)
+
+        communities_names=0
+        communities_genes=[]
+        communities_names_list=[]
+        for i in communities:
+            communities_names=communities_names+1
+            for j in i:
+                communities_genes.append(genes_ordered[j])
+                communities_names_list.append(j)
+        communities_dataframe=pd.DataFrame()
+        communities_dataframe["genes"]=communities_genes
+        communities_dataframe["communities"]=communities_list
+
+        adata.uns[communities_slot]=communities_dataframe
+        print("Communities saved in .uns[" + communities_slot + "].")
+
+        return adata
+
+    elif type(adata.uns[grn])==dict:
+
+        if communities_slot is None:
+            communities_slot = "dynamic_communities"
+
+        GRN=adata.uns[grn]
+
+        communities_epoch_dataframes=[]
+        for i in GRN:
+            
+            if use_weights==True:
+                weight_value=GRN[i][weight_column]
+            else:
+                weight_value=None
+            
+
+            tuples = [tuple(x) for x in GRN[i].values]
+            Gm = igraph.Graph.TupleList(tuples, directed = False)
+            genes_ordered=[]
+            for j in Gm.vs:
+                genes_ordered.append(j["name"])
+
+            communities=Gm.community_multilevel(weights=weight_value)
+
+            communities_names=0
+            communities_genes=[]
+            communities_names_list=[]
+            for k in communities:
+                communities_names=communities_names+1
+                for j in k:
+                    communities_genes.append(genes_ordered[j])
+                    communities_names_list.append(communities_names)
+            communities_dataframe=pd.DataFrame()
+            communities_dataframe["genes"]=communities_genes
+            communities_dataframe["communities"]=communities_names_list
+            
+            communities_epoch_dataframes.append(communities_dataframe)
+
+        l1=GRN.keys()
+        res=dict(zip(l1,communities_epoch_dataframes))
+        
+        adata.uns[communities_slot]=res
+        print("Communities saved in .uns[" + communities_slot + "].")
+    
+        return adata
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 

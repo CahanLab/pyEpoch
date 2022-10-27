@@ -32,7 +32,8 @@ setup(name='pyEpoch',
           #'sys',
           'scikit-fda',
           'seaborn',
-          'pyitlib'
+          'pyitlib',
+          'collections'
       ],
       zip_safe=False)
 

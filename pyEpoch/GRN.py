@@ -1,29 +1,13 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[ ]:
-
-
 import numpy as np
 import pandas as pd
 import scanpy as sc
-import loess as lo
+#import loess as lo
 from sklearn.preprocessing import KBinsDiscretizer
 from sklearn.metrics import normalized_mutual_info_score
 import sys
 from scipy import stats
 from pygam import GAM, s,l
 from .utils import *
-
-
-
-# In[ ]:
-
-
-#from .utils import *
-
-
-# In[ ]:
 
 
 def gamFit(expMat,genes,celltime):

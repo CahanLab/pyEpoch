@@ -12,6 +12,9 @@ import matplotlib.pyplot as plt
 import sys
 import seaborn as sns
 from matplotlib.lines import Line2D
+from skfda import FDataGrid
+import skfda.preprocessing.smoothing.kernel_smoothers as ks
+from sklearn import preprocessing
 from .utils import *
 
 
@@ -23,6 +26,7 @@ def set_figure_params(
     dpi: int = 200,
     figsize: int = None,
     facecolor: str = None,
+    fontsize: int = 8,
     ipython_format: str = "png2x"
 ):
     """\
@@ -61,12 +65,14 @@ def set_figure_params(
     else:
         figsize_global = None
 
-
+    rcParams['font.size'] = fontsize
+    rcParams['legend.fontsize'] = 0.92 * fontsize
+    rcParams['axes.titlesize'] = fontsize
+    rcParams['axes.labelsize'] = fontsize
         
-        
 
-def plot_dynamic_network(adata,only_TFs=True,order=None,thresh=None,save=False):
-    grn = adata.uns["dynamic_GRN"]
+def plot_dynamic_network(adata,grn_name="dynamic_GRN",only_TFs=True,order=None,thresh=None,save=False):
+    grn = adata.uns[grn_name]
     tfs = adata.uns['tfs']
     if type(grn)==dict:
         if order != None:
@@ -116,13 +122,13 @@ def plot_dynamic_network(adata,only_TFs=True,order=None,thresh=None,save=False):
 
 
             h1 = nx.draw_networkx_nodes(G, pos=pos, node_color = 'grey',
-                                    alpha = 0.9, node_size = 300, linewidths=1)
+                                    alpha = 0.9, node_size = 50, linewidths=1)
 
 
             h2 = nx.draw_networkx_edges(G, pos=pos, width=1, edge_color=colors)
 
 
-            h3 = nx.draw_networkx_labels(G, pos=pos, font_size=8, font_color='k',font_weight='bold')
+            h3 = nx.draw_networkx_labels(G, pos=pos, font_size=5, font_color='k',font_weight='bold')
 
 
             def make_proxy(clr, mappable, **kwargs):
@@ -133,11 +139,11 @@ def plot_dynamic_network(adata,only_TFs=True,order=None,thresh=None,save=False):
 
 
 
-            plt.title(i,fontsize=20)
+            plt.title(i,fontsize=8)
             plt.legend(["a plot"])
-            plt.legend(proxies,labels,fontsize=20)
+            plt.legend(proxies,labels,fontsize=8)
             if save == True:
-                plt.savefig('dynamic_network: ' + i + '.png', dpi=300)
+                plt.savefig('dynamic_network: ' + i + '.png', dpi=150)
             plt.show()
             
     else:
@@ -181,13 +187,13 @@ def plot_dynamic_network(adata,only_TFs=True,order=None,thresh=None,save=False):
 
 
         h1 = nx.draw_networkx_nodes(G, pos=pos, node_color = 'grey',
-                                alpha = 0.9, node_size = 300, linewidths=1)
+                                alpha = 0.9, node_size = 50, linewidths=1)
 
 
         h2 = nx.draw_networkx_edges(G, pos=pos, width=1, edge_color=colors)
 
 
-        h3 = nx.draw_networkx_labels(G, pos=pos, font_size=8, font_color='k',font_weight='bold')
+        h3 = nx.draw_networkx_labels(G, pos=pos, font_size=5, font_color='k',font_weight='bold')
 
 
         def make_proxy(clr, mappable, **kwargs):
@@ -198,11 +204,11 @@ def plot_dynamic_network(adata,only_TFs=True,order=None,thresh=None,save=False):
 
 
 
-        plt.title("Network",fontsize=20)
+        plt.title("Network",fontsize=8)
         plt.legend(["a plot"])
-        plt.legend(proxies,labels,fontsize=20)
+        plt.legend(proxies,labels,fontsize=8)
         if save == True:
-            plt.savefig('dynamic_network.png', dpi=300)
+            plt.savefig('dynamic_network.png', dpi=150)
         plt.show()
         
         
@@ -258,13 +264,13 @@ def plot_network(grn,only_TFs=True,order=None,thresh=None,save=False):
 
 
             h1 = nx.draw_networkx_nodes(G, pos=pos, node_color = 'grey',
-                                    alpha = 0.9, node_size = 300, linewidths=1)
+                                    alpha = 0.9, node_size = 50, linewidths=1)
 
 
             h2 = nx.draw_networkx_edges(G, pos=pos, width=1, edge_color=colors)
 
 
-            h3 = nx.draw_networkx_labels(G, pos=pos, font_size=8, font_color='k',font_weight='bold')
+            h3 = nx.draw_networkx_labels(G, pos=pos, font_size=5, font_color='k',font_weight='bold')
 
 
             def make_proxy(clr, mappable, **kwargs):
@@ -275,11 +281,11 @@ def plot_network(grn,only_TFs=True,order=None,thresh=None,save=False):
 
 
 
-            plt.title(i,fontsize=20)
+            plt.title(i,fontsize=8)
             plt.legend(["a plot"])
-            plt.legend(proxies,labels,fontsize=20)
+            plt.legend(proxies,labels,fontsize=8)
             if save == True:
-                plt.savefig('dynamic_network: ' + i + '.png', dpi=300)
+                plt.savefig('dynamic_network: ' + i + '.png', dpi=150)
             plt.show()
             
     else:
@@ -323,13 +329,13 @@ def plot_network(grn,only_TFs=True,order=None,thresh=None,save=False):
 
 
         h1 = nx.draw_networkx_nodes(G, pos=pos, node_color = 'grey',
-                                alpha = 0.9, node_size = 300, linewidths=1)
+                                alpha = 0.9, node_size = 50, linewidths=1)
 
 
         h2 = nx.draw_networkx_edges(G, pos=pos, width=1, edge_color=colors)
 
 
-        h3 = nx.draw_networkx_labels(G, pos=pos, font_size=8, font_color='k',font_weight='bold')
+        h3 = nx.draw_networkx_labels(G, pos=pos, font_size=5, font_color='k',font_weight='bold')
 
 
         def make_proxy(clr, mappable, **kwargs):
@@ -340,11 +346,11 @@ def plot_network(grn,only_TFs=True,order=None,thresh=None,save=False):
 
 
 
-        plt.title("Network",fontsize=20)
+        plt.title("Network",fontsize=8)
         plt.legend(["a plot"])
-        plt.legend(proxies,labels,fontsize=20)
+        plt.legend(proxies,labels,fontsize=8)
         if save == True:
-            plt.savefig('dynamic_network.png', dpi=300)
+            plt.savefig('dynamic_network.png', dpi=150)
         plt.show()
         
         
@@ -357,7 +363,7 @@ def plot_network(grn,only_TFs=True,order=None,thresh=None,save=False):
 #plot_top_regulators<-function(grn,gene_ranks,tfs,numTopTFs=5, numTargets=5, only_TFs=TRUE,order=NULL)
 #plot_top_regulators(dynamic_grn, gene_rank, mmTFs, only_TFs=FALSE)
 
-def plot_top_regulators(adata,gene_ranks="pagerank", numTopTFs=5,numTargets=5, only_TFs=True, order=None, save=False):
+def plot_top_regulators(adata,grn_name="dynamic_GRN",gene_ranks="pagerank", numTopTFs=5,numTargets=5, only_TFs=True, order=None, save=False):
     #adata = anndata
     #gene_ranks= "pagerank" or "betweenness_degree"
     #numTopTFs=5
@@ -365,7 +371,7 @@ def plot_top_regulators(adata,gene_ranks="pagerank", numTopTFs=5,numTargets=5, o
     #only_TFs=True
     #order=None
     
-    grn = adata.uns["dynamic_GRN"]
+    grn = adata.uns[grn_name]
     tfs = adata.uns['tfs']
     gene_ranks = adata.uns[gene_ranks]
 
@@ -446,7 +452,7 @@ def plot_top_regulators(adata,gene_ranks="pagerank", numTopTFs=5,numTargets=5, o
 
 
         h1 = nx.draw_networkx_nodes(G, pos=pos, node_color = 'grey', #nodelist=list(topdf["TF"].values),
-                                alpha = 0.9, node_size = 300, linewidths=1)
+                                alpha = 0.9, node_size = 50, linewidths=1)
         #h11 = nx.draw_networkx_nodes(G, pos=pos, node_color = 'grey', nodelist=list(topdf["TG"].values),
                                 #alpha = 0.9, node_size = 300, linewidths=1)
 
@@ -454,7 +460,7 @@ def plot_top_regulators(adata,gene_ranks="pagerank", numTopTFs=5,numTargets=5, o
         h2 = nx.draw_networkx_edges(G, pos=pos, width=1, edge_color=colors)
 
 
-        h3 = nx.draw_networkx_labels(G, pos=pos, font_size=8, font_color='k',font_weight='bold')
+        h3 = nx.draw_networkx_labels(G, pos=pos, font_size=5, font_color='k',font_weight='bold')
 
 
         def make_proxy(clr, mappable, **kwargs):
@@ -463,11 +469,11 @@ def plot_top_regulators(adata,gene_ranks="pagerank", numTopTFs=5,numTargets=5, o
         labels=["repression","activation"]
         #end legend stuff
 
-        plt.title(epoch,fontsize=20)
+        plt.title(epoch,fontsize=8)
         plt.legend(["a plot"])
-        plt.legend(proxies,labels,fontsize=20)
+        plt.legend(proxies,labels,fontsize=8)
         if save == True:
-            plt.savefig('top_regulators: ' + epoch + '.png', dpi=300)
+            plt.savefig('top_regulators: ' + epoch + '.png', dpi=150)
         plt.show()
 
 
@@ -481,14 +487,14 @@ def plot_top_regulators(adata,gene_ranks="pagerank", numTopTFs=5,numTargets=5, o
 #plot_targets_with_top_regulators(dynamic_grn,interesting_targets,rank_metric="zscore")
 
 
-def plot_targets_with_top_regulators(adata,targets,rank_metric="zscore",numTopRegulators=5,order=None, save=False):
+def plot_targets_with_top_regulators(adata,targets,grn_name="dynamic_GRN",rank_metric="zscore",numTopRegulators=5,order=None, save=False):
     #grn=dynamic_grn
     #targets=interesting_targets
     #rank_metric="zscore" or "pagerank" or "betweenness_degree"
     #numTopRegulators=5
     #order=None
     
-    grn = adata.uns["dynamic_GRN"]
+    grn = adata.uns[grn_name]
 
     if order != None:
         grn = {k: grn[k] for k in order}
@@ -593,12 +599,12 @@ def plot_targets_with_top_regulators(adata,targets,rank_metric="zscore",numTopRe
         for aShape in nodeShapes:
             #...filter and draw the subset of nodes with the same symbol in the positions that are now known through the use of the layout.
             h1 = nx.draw_networkx_nodes(G, pos=pos, node_shape=aShape,nodelist = [sNode[0] for sNode in filter(lambda x: x[1]["s"]==aShape,G.nodes(data = True))], node_color = 'grey',
-                                    label=target_labels[count],alpha = 0.9, node_size = 300, linewidths=1)
+                                    label=target_labels[count],alpha = 0.9, node_size = 50, linewidths=1)
             count=count+1
 
         h2 = nx.draw_networkx_edges(G, pos=pos, width=1, edge_color=colors)
 
-        h3 = nx.draw_networkx_labels(G, pos=pos, font_size=8, font_color='k',font_weight='bold')
+        h3 = nx.draw_networkx_labels(G, pos=pos, font_size=5, font_color='k',font_weight='bold')
 
 
         def make_proxy(clr, mappable, **kwargs):
@@ -607,13 +613,13 @@ def plot_targets_with_top_regulators(adata,targets,rank_metric="zscore",numTopRe
         labels=["repression","activation"]
         #end legend stuff
 
-        plt.title(epoch,fontsize=20)
-        leg= plt.legend(scatterpoints = 1,fontsize=20, loc=(1.03,0))
+        plt.title(epoch,fontsize=8)
+        leg= plt.legend(scatterpoints = 1,fontsize=8, loc=(1.03,0))
         ax.add_artist(leg)
         plt.legend(["a plot"])
-        plt.legend(proxies,labels,fontsize=20, loc=(1.03,0.5))
+        plt.legend(proxies,labels,fontsize=8, loc=(1.03,0.5))
         if save == True:
-            plt.savefig('targets_with_top_regulators: ' + epoch + '.png', dpi=300)
+            plt.savefig('targets_with_top_regulators: ' + epoch + '.png', dpi=150)
         plt.show()
 
 
@@ -684,7 +690,7 @@ def hm_dyn(adata,limit_to=None,smooth=True,topX=25,cRow=False,cCol=False,limits=
     if toScale==True:
         save_genes=value.index
         save_cells=value.columns
-        value=pd.DataFrame(preprocessing.scale(value))
+        value=pd.DataFrame(preprocessing.scale(value.T)).T
         value.index=save_genes
         value.columns=save_cells
     value=value[value>limits[0]]
@@ -708,3 +714,74 @@ def hm_dyn(adata,limit_to=None,smooth=True,topX=25,cRow=False,cCol=False,limits=
     plt.show()
 
     return ax
+
+
+
+
+
+def hm_module_expression(activity_cells,smooth=True,BW=.2,limits=[0,10],toScale=False, save=None):
+
+    # Get the activity (remove columns)
+    cells = activity_cells
+    cells=cells.sort_values(by='pseudotime',ascending=True)
+    data = cells.drop(['cell_name','pseudotime','group','epoch'],axis=1,errors='ignore')
+
+    if smooth:
+        BW=min(BW, (max(cells["pseudotime"])-min(cells["pseudotime"]))/10)
+        
+        ans=pd.DataFrame(columns=np.arange(data.shape[0]))
+
+        x=cells["pseudotime"].values
+        for i in np.arange(data.shape[1]):
+            y=data.iloc[:,i].values
+            fd = FDataGrid(sample_points=[x],data_matrix=[y])
+            smoother = ks.NadarayaWatsonSmoother(smoothing_parameter=BW)
+            smoothed = smoother.fit_transform(fd)
+            a=smoothed.data_matrix.round(10)
+            thisrow = np.ravel(a).tolist()
+            ans=pd.concat([ans,pd.DataFrame(thisrow).T])
+
+        ans.index=data.columns
+        ans.columns=data.index
+    else:
+        ans = data
+
+    peakTime=pd.DataFrame(ans.apply(np.argmax,axis=1))
+    peakTime.columns=["peakTime"]
+    effectorsOrdered=peakTime.sort_values(by="peakTime",ascending=True).index
+
+    value = ans.loc[effectorsOrdered]
+
+    value = value[value.columns].astype(float)
+
+    if toScale==True:
+        save_genes=value.index
+        save_cells=value.columns
+        value=pd.DataFrame(preprocessing.scale(value.T)).T
+        value.index=save_genes
+        value.columns=save_cells
+
+    value[value<limits[0]] = limits[0]
+    value[value>limits[1]] = limits[1]
+
+    #groupNames=np.unique(list(grps.index))
+    #cells=list(groupNames)
+
+    value = value[value.columns].astype(float)
+
+    sns.set_theme()
+    sns.set(font_scale=.5)
+    
+    if figsize_global is not None:
+        fig, ax = plt.subplots(figsize=figsize_global)
+    else:
+        fig, ax = plt.subplots(figsize=(6,8))         
+        
+    ax = sns.heatmap(value,yticklabels=True,xticklabels=False)
+    if save == True:
+        plt.savefig('activity_heatmap.png', dpi=300)
+    plt.show()
+
+    return ax
+
+
