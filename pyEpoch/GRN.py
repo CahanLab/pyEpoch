@@ -24,11 +24,11 @@ def gamFit(expMat,genes,celltime):
         gam=GAM(l(0)).fit(X,y)
         p=gam.statistics_['p_values'][0]
         return p
-    ans=expMat.loc[genes2][celltime.index].apply(abcd,axis=1)
+    ans=expMat.apply(abcd,axis=1)
     return ans
 
 
-# def loessFit(expMat,genes,celltime):
+# def loessFit(expMat,genes,celltisme):
 
 #     genes2=(set(genes) & set(expMat.index))
 #     def abcd(input_data):
